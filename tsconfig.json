@@ -1,0 +1,22 @@
+
+{
+  "compilerOptions": {
+    "declaration": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "module": "es6",
+    "target": "es5",
+    "allowJs": true,
+    "sourceMap": true,
+    "lib": [
+      "es2016",
+      "dom"
+    ],
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tools"
+  ]
+}

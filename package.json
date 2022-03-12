@@ -1,0 +1,29 @@
+{
+    "version": "1.0.0",
+    "description": "Swellray",
+    "name": "swellray",
+    "main": "./dist/main.js",
+    "types": "./dist/main.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "webpack --mode=production --node-env=production",
+        "build:dev": "webpack --mode=development",
+        "build:prod": "webpack --mode=production --node-env=production",
+        "watch": "webpack --watch",
+        "serve": "webpack serve",
+        "prepublishOnly": "webpack --mode=production"
+    },
+    "devDependencies": {
+        "@types/three": "^0.138.0",
+        "html-webpack-plugin": "^5.5.0",
+        "raw-loader": "^4.0.2",
+        "three": "^0.138.3",
+        "ts-loader": "^9.2.8",
+        "typescript": "^4.6.2",
+        "webpack": "^5.70.0",
+        "webpack-cli": "^4.9.2",
+        "webpack-dev-server": "^4.7.4"
+    }
+}
