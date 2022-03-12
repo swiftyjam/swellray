@@ -1,7 +1,8 @@
 import { ArrowHelper, BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
 import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
-export declare class SWSURF {
+export declare class Swellray {
+    container: HTMLElement;
     scene: Scene;
     renderer: WebGLRenderer;
     camera: PerspectiveCamera;
@@ -9,32 +10,32 @@ export declare class SWSURF {
     controls: OrbitControls;
     dots: Points;
     plane: Mesh;
-    sea_floor: Mesh;
+    seaFloor: Mesh;
     delta: number;
-    fps_limit: number;
+    fps: number;
     waves: Array<TorochoidalWave>;
     maxHeight: number;
-    heightmap: Texture;
-    noisemap: Texture;
-    p_material: ShaderMaterial;
-    _Centers: BufferAttribute;
-    settings: Object;
-    SCALE: number;
-    DEPTH_SCALE: number;
-    MAX_SCALE: number;
-    SPEED: number;
+    depthMap: Texture;
+    noiseMap: Texture;
+    seaMaterial: ShaderMaterial;
+    seaCenters: BufferAttribute;
+    seaSpreadScale: number;
+    seaDepthScale: number;
+    simulationSpeed: number;
     readonly AMOUNTX: number;
     readonly AMOUNTZ: number;
     readonly CENTERS_NUMBER: number;
     readonly G = 9.81;
-    DEBUG_POINT: number;
-    arrowHelper: ArrowHelper;
+    persona: ArrowHelper;
+    constructor(container: HTMLElement);
     init(): Promise<void>;
+    buildSea(): void;
+    initControls(): void;
     resetWaves(): void;
     addWave(): void;
-    loadHeightMap(): Promise<void>;
+    loadheightMap(): Promise<void>;
     onWindowResize(): void;
-    updateDotGrid(): void;
+    updateGrid(): void;
     update(): void;
     render(): void;
 }
