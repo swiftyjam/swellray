@@ -12,22 +12,19 @@ const config = {
         path: path.resolve(__dirname, 'dist'),
         filename: 'swellray.js',
         library: 'Swellray',
-        // libraryTarget: 'umd',
-        // gloablObject: 'this',
-        // umdNameDefine: true,
     },
     devServer: {
         open: true,
         host: 'localhost',
     },
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: 'index.html',
-        }),
+    // plugins: [
+    //     new HtmlWebpackPlugin({
+    //         template: 'index.html',
+    //     }),
 
-        // Add your plugins here
-        // Learn more about plugins from https://webpack.js.org/configuration/plugins/
-    ],
+    //     // Add your plugins here
+    //     // Learn more about plugins from https://webpack.js.org/configuration/plugins/
+    // ],
     module: {
         rules: [{
                 test: /\.(ts|tsx)$/i,

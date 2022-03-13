@@ -4,16 +4,12 @@ export class TorochoidalWave {
     period: number
     direction: Vector2
     height: number
-    steepness: number
-    wavelength: number
     // the max scale of the dot distributed in the heihgt of the grid
 
-    constructor(SCALE: number, in_period: number, in_direction: Vector2, in_height: number,in_steepness : number,in_wavelength : number) {
+    constructor (in_period: number, in_direction: Vector2, in_height: number) {
         this.period = in_period
         this.direction = in_direction.normalize()
         this.height = in_height
-        this.steepness = in_steepness
-        this.wavelength = in_wavelength
     }
 
 }

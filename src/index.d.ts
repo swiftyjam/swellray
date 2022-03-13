@@ -32,8 +32,9 @@ export declare class Swellray {
     buildSea(): void;
     initControls(): void;
     resetWaves(): void;
-    addWave(): void;
-    loadheightMap(): Promise<void>;
+    addWave(period: number, direction: [number, number], height: number): void;
+    loadDepthMap(): Promise<void>;
+    loadChop(): Promise<void>;
     onWindowResize(): void;
     updateGrid(): void;
     update(): void;
