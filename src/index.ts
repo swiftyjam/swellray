@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ArrowHelper, BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, Vector2, Vector3, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
+import { BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, Vector2, Vector3, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
 import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
 import swellRayFragment from "../shaders/swellrayFragment.fs";
@@ -9,6 +9,7 @@ export class Swellray {
     scene: Scene
     renderer: WebGLRenderer
     camera: PerspectiveCamera
+    cameraType: string
     clock: Clock
     controls: OrbitControls
     dots: Points
@@ -28,12 +29,13 @@ export class Swellray {
     simulationSpeed: number
     readonly AMOUNTX: number = 128
     readonly AMOUNTZ: number = 128
+    readonly LIB_PATH: string 
     readonly CENTERS_NUMBER = this.AMOUNTX * this.AMOUNTZ
     readonly G = 9.81
-    //DEBUG
-    persona: ArrowHelper
+
     // the max scale of the dot distributed in the heihgt of the grid
-    constructor(container: HTMLElement) {
+    constructor(container: HTMLElement, libPath: string) {
+        this.LIB_PATH = libPath;
         this.container = container;
     }
     async init() {
@@ -47,7 +49,7 @@ export class Swellray {
         this.delta = 0
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xeeefff);
-        this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
+        // this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -60,8 +62,6 @@ export class Swellray {
         this.initControls();
         this.buildSea();
 
-        this.persona = new THREE.ArrowHelper(new Vector3(0, 0, 0), new Vector3(0, 0, 0), 1.70, new THREE.Color('red'), 0.25, 1);
-        this.scene.add(this.persona);
         // lights
 
         const dirLight1 = new THREE.DirectionalLight(0xffffff);
@@ -161,7 +161,7 @@ export class Swellray {
         this.plane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.plane.rotateX(Math.PI)
         this.scene.add(this.plane);
-
+        
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -211,13 +211,16 @@ export class Swellray {
         // load a image resource
         await loader1.loadAsync(
             // resource URL
-            '/asset/height-map-54.png',
+            `${this.LIB_PATH}/assets/height-map-54.png`,
         ).then(image => {
             this.depthMap = image
             this.seaMaterial.uniforms.uDepthmap.value = this.depthMap
             const seaFloor_geometry = new THREE.PlaneGeometry(128 * this.seaSpreadScale, 128 * this.seaSpreadScale, 128, 128);
-            const seaFloor_material = new THREE.MeshStandardMaterial()
+            const seaFloor_material = new THREE.MeshPhongMaterial()
             seaFloor_material.wireframe = true
+            seaFloor_material.shininess = 30
+            seaFloor_material.color = new THREE.Color('#2d445c')
+            // seaFloor_material.fog = true
             seaFloor_material.displacementMap = this.depthMap
             seaFloor_material.displacementScale = (-1) * this.seaDepthScale * 10 * 256
             this.seaFloor = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
@@ -233,7 +236,7 @@ export class Swellray {
         let loader2 = new THREE.TextureLoader();
         await loader2.loadAsync(
             // resource URL
-            '/asset/normal5.png',
+            `${this.LIB_PATH}/assets/normal5.png`,
         ).then(image => {
             this.noiseMap = image
             this.noiseMap.wrapT = this.noiseMap.wrapS = THREE.RepeatWrapping
@@ -248,12 +251,11 @@ export class Swellray {
     }
 
 
-    updateGrid() {
-
+    updateControls() {
+        this.controls.update();
     }
     update() {
-        this.controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
-        this.updateGrid()
+        this.updateControls()
         requestAnimationFrame(this.update.bind(this));
         this.delta += this.clock.getDelta()
         if (this.delta > 1 / this.fps) {

@@ -24,6 +24,7 @@ export declare class Swellray {
     simulationSpeed: number;
     readonly AMOUNTX: number;
     readonly AMOUNTZ: number;
+    readonly IMG_ROOT: string;
     readonly CENTERS_NUMBER: number;
     readonly G = 9.81;
     persona: ArrowHelper;
@@ -32,6 +33,7 @@ export declare class Swellray {
     buildSea(): void;
     initControls(): void;
     resetWaves(): void;
+    setWind(speed: number, direction: [number, number]): void;
     addWave(period: number, direction: [number, number], height: number): void;
     loadDepthMap(): Promise<void>;
     loadChop(): Promise<void>;

@@ -1,6 +1,7 @@
 
 {
   "compilerOptions": {
+    "types": ["node"],
     "declaration": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
