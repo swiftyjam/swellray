@@ -6,6 +6,7 @@ import { TorochoidalWave } from "./TorochoidalWave";
 // import swellRayVertex from "../shaders/swellrayVertex.vs";
 import {fragment} from "../shaders/swellrayFragment.js";
 import {vertex} from "../shaders/swellrayVertex.js";
+import * as defaultTheme from "../themes/default.json";
 export class Swellray {
     container: HTMLElement
     scene: Scene
@@ -15,8 +16,10 @@ export class Swellray {
     clock: Clock
     controls: OrbitControls
     dots: Points
-    plane: Mesh
-    seaFloor: Mesh
+    seaPlane: Mesh
+    floorPlane: Mesh
+    theme: any
+    backgroundColor: string
     delta: number
     fps: number
     waves: Array<TorochoidalWave>
@@ -43,6 +46,7 @@ export class Swellray {
     }
     async init() {
 
+        this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.fps = 30
         this.waves = []
@@ -51,7 +55,7 @@ export class Swellray {
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xeeefff);
+        this.scene.background = new THREE.Color(`0x${this.theme.props.colors.backgroundColor}`);
         // this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -65,23 +69,8 @@ export class Swellray {
         this.initControls();
         this.buildSea();
 
-        // lights
-
-        const dirLight1 = new THREE.DirectionalLight(0xffffff);
-        dirLight1.position.set(1, 1, 1);
-        this.scene.add(dirLight1);
-
-        const dirLight2 = new THREE.DirectionalLight(0x002288);
-        dirLight2.position.set(- 1, - 1, - 1);
-        this.scene.add(dirLight2);
-
-        const ambientLight = new THREE.AmbientLight(0x222222);
-        this.scene.add(ambientLight);
-
         window.addEventListener('resize', this.onWindowResize.bind(this));
-        // TODO: Decouple await in index.ts
-        // await this.loadBathymetry()
-        // await this.loadChop()
+
         this.update()
 
 
@@ -89,8 +78,6 @@ export class Swellray {
     buildSea() {
         const positions = new Float32Array(this.CENTERS_NUMBER * 3);
         const scales = new Float32Array(this.CENTERS_NUMBER);
-        const colors = new Float32Array(this.CENTERS_NUMBER * 3)
-        const iColor = new THREE.Color("rgb(5, 10, 30)")
         let i = 0, j = 0;
 
         for (let ix = 0; ix < this.AMOUNTX; ix++) {
@@ -100,10 +87,6 @@ export class Swellray {
                 positions[i] = ix * this.seaSpreadScale - ((this.AMOUNTX * this.seaSpreadScale) / 2); // x
                 positions[i + 1] = 0; // y
                 positions[i + 2] = iz * this.seaSpreadScale - ((this.AMOUNTZ * this.seaSpreadScale) / 2); // z
-
-                colors[i] = iColor.r
-                colors[i + 1] = iColor.g
-                colors[i + 2] = iColor.b
 
                 scales[j] = this.seaSpreadScale;
 
@@ -138,8 +121,8 @@ export class Swellray {
                 uNoiseMap: {
                     value: null
                 },
-                u_low_color: { value: new THREE.Color('#0032a8') },
-                u_high_color: { value: new THREE.Color('#0054a8') },
+                u_low_color: { value: new THREE.Color(`#${this.theme.props.colors.lowSeaColor}`) },
+                u_high_color: { value: new THREE.Color(`#${this.theme.props.colors.highSeaColor}`) },
                 u_color_offset: { value: 1 },
                 u_color_multiplier: { value: 1.5 },
 
@@ -158,20 +141,16 @@ export class Swellray {
         // p_geometry.rotateY(Math.PI);
         p_geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         p_geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
-        p_geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        this.plane = new THREE.Mesh(p_geometry, this.seaMaterial);
-        this.plane.rotateX(Math.PI)
-        this.scene.add(this.plane);
+       
+        this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
+        this.seaPlane.rotateX(Math.PI)
+        this.scene.add(this.seaPlane);
 
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
         d_geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         d_geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
-        d_geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-
-
 
         this.dots = new THREE.Points(d_geometry, this.seaMaterial);
         this.dots.rotateX(Math.PI)
@@ -214,18 +193,16 @@ export class Swellray {
             this.bathymetryMap = image
             this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
             const seaFloor_geometry = new THREE.PlaneGeometry(128 * this.seaSpreadScale, 128 * this.seaSpreadScale, 128, 128);
-            const seaFloor_material = new THREE.MeshPhongMaterial()
+            const seaFloor_material = new THREE.MeshStandardMaterial()
             seaFloor_material.wireframe = true
-            seaFloor_material.shininess = 30
-            seaFloor_material.color = new THREE.Color('#2d445c')
-            // seaFloor_material.fog = true
+            seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`) 
             seaFloor_material.displacementMap = this.bathymetryMap
             seaFloor_material.displacementScale = (-1) * this.seaDepthScale * 10 * 256
-            this.seaFloor = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
-            this.seaFloor.rotateX(-Math.PI / 2)
-            this.seaFloor.rotateZ(+Math.PI / 2)
-            this.seaFloor.position.setY(0)
-            this.scene.add(this.seaFloor)
+            this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
+            this.floorPlane.rotateX(-Math.PI / 2)
+            this.floorPlane.rotateZ(+Math.PI / 2)
+            this.floorPlane.position.setY(0)
+            this.scene.add(this.floorPlane)
         })
 
     }
