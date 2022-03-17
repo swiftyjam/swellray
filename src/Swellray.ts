@@ -69,9 +69,11 @@ export class Swellray {
         this.initControls();
         this.buildSea();
 
+        
         window.addEventListener('resize', this.onWindowResize.bind(this));
 
-        this.update()
+        this.update();
+        this.onWindowResize();
 
 
     }
@@ -216,9 +218,9 @@ export class Swellray {
     }
     onWindowResize() {
 
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.aspect = this.container.offsetWidth / this.container.offsetHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(this.container.offsetWidth, this.container.offsetHeight);
     }
 
 
