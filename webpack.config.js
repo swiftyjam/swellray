@@ -12,6 +12,9 @@ const config = {
         path: path.resolve(__dirname, 'dist'),
         filename: 'swellray.js',
         library: 'Swellray',
+        libraryTarget: 'umd',
+        umdNamedDefine: true,
+        globalObject: 'this'
     },
     devServer: {
         open: true,
