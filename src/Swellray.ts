@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import { BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, Vector2, Vector3, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
 import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
-import swellRayFragment from "../shaders/swellrayFragment.fs";
-import swellRayVertex from "../shaders/swellrayVertex.vs";
+// import swellRayFragment from "../shaders/swellrayFragment.fs";
+// import swellRayVertex from "../shaders/swellrayVertex.vs";
+import {fragment} from "../shaders/swellrayFragment.js";
+import {vertex} from "../shaders/swellrayVertex.js";
 export class Swellray {
     container: HTMLElement
     scene: Scene
@@ -19,8 +21,8 @@ export class Swellray {
     fps: number
     waves: Array<TorochoidalWave>
     maxHeight: number
-    depthMap: Texture
-    noiseMap: Texture
+    bathymetryMap: Texture
+    chopMap: Texture
     seaMaterial: ShaderMaterial
     seaCenters: BufferAttribute
 
@@ -29,13 +31,14 @@ export class Swellray {
     simulationSpeed: number
     readonly AMOUNTX: number = 128
     readonly AMOUNTZ: number = 128
-    readonly LIB_PATH: string 
+    readonly LIB_PATH: string
     readonly CENTERS_NUMBER = this.AMOUNTX * this.AMOUNTZ
     readonly G = 9.81
 
     // the max scale of the dot distributed in the heihgt of the grid
-    constructor(container: HTMLElement, libPath: string) {
-        this.LIB_PATH = libPath;
+    constructor(container: HTMLElement, bathymetryMapImage: string, chopMapImage: string) {
+        this.loadBathymetry(bathymetryMapImage);
+        this.loadChop(chopMapImage);
         this.container = container;
     }
     async init() {
@@ -77,8 +80,8 @@ export class Swellray {
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
         // TODO: Decouple await in index.ts
-        await this.loadChop()
-        await this.loadDepthMap()
+        // await this.loadBathymetry()
+        // await this.loadChop()
         this.update()
 
 
@@ -144,10 +147,8 @@ export class Swellray {
 
             },
             wireframe: false,
-
-            vertexShader: swellRayVertex,
-
-            fragmentShader: swellRayFragment
+            vertexShader: vertex,
+            fragmentShader: fragment
         });
 
 
@@ -161,7 +162,7 @@ export class Swellray {
         this.plane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.plane.rotateX(Math.PI)
         this.scene.add(this.plane);
-        
+
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -205,23 +206,20 @@ export class Swellray {
 
         //TODO Calc max Height
     }
-    async loadDepthMap() {
+    async loadBathymetry( bathymetryMapImage : string) {
         // instantiate a loader
         let loader1 = new THREE.TextureLoader();
         // load a image resource
-        await loader1.loadAsync(
-            // resource URL
-            `${this.LIB_PATH}/assets/height-map-54.png`,
-        ).then(image => {
-            this.depthMap = image
-            this.seaMaterial.uniforms.uDepthmap.value = this.depthMap
+        await loader1.loadAsync(bathymetryMapImage).then(image => {
+            this.bathymetryMap = image
+            this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
             const seaFloor_geometry = new THREE.PlaneGeometry(128 * this.seaSpreadScale, 128 * this.seaSpreadScale, 128, 128);
             const seaFloor_material = new THREE.MeshPhongMaterial()
             seaFloor_material.wireframe = true
             seaFloor_material.shininess = 30
             seaFloor_material.color = new THREE.Color('#2d445c')
             // seaFloor_material.fog = true
-            seaFloor_material.displacementMap = this.depthMap
+            seaFloor_material.displacementMap = this.bathymetryMap
             seaFloor_material.displacementScale = (-1) * this.seaDepthScale * 10 * 256
             this.seaFloor = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.seaFloor.rotateX(-Math.PI / 2)
@@ -230,17 +228,13 @@ export class Swellray {
             this.scene.add(this.seaFloor)
         })
 
-
     }
-    async loadChop() {
+    async loadChop( chopMapImage : string) {
         let loader2 = new THREE.TextureLoader();
-        await loader2.loadAsync(
-            // resource URL
-            `${this.LIB_PATH}/assets/normal5.png`,
-        ).then(image => {
-            this.noiseMap = image
-            this.noiseMap.wrapT = this.noiseMap.wrapS = THREE.RepeatWrapping
-            this.seaMaterial.uniforms.uNoiseMap.value = this.noiseMap
+        await loader2.loadAsync(chopMapImage).then(image => {
+            this.chopMap = image
+            this.chopMap.wrapT = this.chopMap.wrapS = THREE.RepeatWrapping
+            this.seaMaterial.uniforms.uNoiseMap.value = this.chopMap
         })
     }
     onWindowResize() {
