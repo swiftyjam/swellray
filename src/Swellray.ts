@@ -55,7 +55,7 @@ export class Swellray {
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(`0x${this.theme.props.colors.backgroundColor}`);
+        this.scene.background = new THREE.Color(`#${this.theme.props.colors.backgroundColor}`);
         // this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:"high-performance" });
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -146,7 +146,7 @@ export class Swellray {
         p_geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
        
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
-        this.seaPlane.rotateX(Math.PI)
+        this.seaPlane.rotateX(Math.PI);
         this.scene.add(this.seaPlane);
 
 
@@ -222,7 +222,7 @@ export class Swellray {
         this.camera.aspect = this.container.offsetWidth / this.container.offsetHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.container.offsetWidth, this.container.offsetHeight);
-        this.renderer.setPixelRatio( this.container.offsetWidth / this.container.offsetHeight);
+        // this.renderer.setPixelRatio( this.container.offsetWidth / this.container.offsetHeight);
 
     }
 
