@@ -1,10 +1,6 @@
 const vertex = `
-    #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
-    #else
-    precision mediump float;
-    #endif
-    
+
     varying vec3 vNormal;
     varying vec3 vViewPosition;
     uniform vec3 mvPosition;
@@ -36,7 +32,7 @@ const vertex = `
         float period=wave.z;
         float height=2.*wave.w + windDisplace;
         
-        float deep_wavelength=1.56*pow(period,2.);
+        float deep_wavelength=1.56*pow(period,2.0);
         float shallow_wavelength=period*sqrt(G*vDepth);
         
         float k=2.*PI/shallow_wavelength;
@@ -47,7 +43,7 @@ const vertex = `
         float f=k*(dot(d,p.xz)-c*uTime);
         // float shoalingCoef=pow(.4466*(deep_wavelength/vDepth),.25);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/deep_wavelength),-.25);
-        
+       
         float steepness=height/shallow_wavelength;
         vSteepness+=steepness;
         float a=shoalingCoef*(steepness/k);
@@ -81,29 +77,24 @@ const vertex = `
         float windSpeed = uWindSpeed * uScale;
         vec2 windDir = normalize(uWindDir);
         vec2 offset1 = windDir * uTime * 0.01 ;
-        // vec2 offset2 = vec2(windDir.x + rand(vec2(-0.5,0.5)),windDir.y + rand(vec2(-0.5,0.5))) * uTime * 0.01 ;
         float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
-        // windDisplace += (texture2D(uNoiseMap, uv * uScale+ offset2).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
     
         float wcount=0.;
         for(int i=0;i<uWaves.length();i++){
-            // dir x, dir z, steepness, wavelength
             vec4 wave=uWaves[i];
-            
             if(wave.w>0.){
                 p+=gerstnerWave(wave,position,windDisplace,tangent,binormal);
                 wcount++;
             }
         }
-        
-        //vSteepness = vSteepness / count; //! This has changed
+
         vDisplacementY=p.y;
     
         vNormal=normalize(cross(binormal,tangent));
         
         vViewPosition=-mvPosition.xyz;
         if(vNormal.z>.142&&vSteepness>.142&&vHeightDepthRatio>1.2*uDepthScale){
-            gl_PointSize=50.*vNormal.z;
+            gl_PointSize=25.*vNormal.z;
         }else{
             gl_PointSize=1.;
         }

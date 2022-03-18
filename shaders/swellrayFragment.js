@@ -1,4 +1,5 @@
 const fragment = `
+precision highp float;  
     varying float vDepth;
     varying vec2 vUv;
     varying vec3 vNormal;
@@ -19,12 +20,10 @@ const fragment = `
         
         float mix_strength=acos(vNormal.x)*(-vDisplacementY);
     
-        vec4 breakColor = vec4(mix(u_low_color,vec3(1.,1.,1.),vHeightDepthRatio*0.1),1.);
-        // vec4 color = vec4(1.,vNormal.z,1.,1.);
+        vec4 breakColor = vec4(mix(u_low_color,vec3(0.75,0.85,1.),vHeightDepthRatio*0.1),1.);
         vec4 color=vec4(mix(u_low_color,u_high_color,mix_strength),1.);
         
         gl_FragColor=color;
-        //gl_FragColor=vec4(vNormal,1.);
         if(vNormal.z > 0.142 && vSteepness > 0.142  && vHeightDepthRatio > 1.2*0.00256){ // 1/7 = 0.142 which is stepness max point, x2 is 0.284, Normal.z is bigger than this it breaks LOL
         gl_FragColor=breakColor;
         }
