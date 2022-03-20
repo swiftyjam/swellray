@@ -1,2 +1,3 @@
 import { Swellray } from "./Swellray";
-export { Swellray };
+import { TorochoidalWave } from "./TorochoidalWave";
+export { Swellray, TorochoidalWave };
