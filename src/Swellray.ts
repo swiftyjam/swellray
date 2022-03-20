@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import { BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, Vector2, Vector3, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
 import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
-// import swellRayFragment from "../shaders/swellrayFragment.fs";
-// import swellRayVertex from "../shaders/swellrayVertex.vs";
 import {fragment} from "../shaders/swellrayFragment.js";
 import {vertex} from "../shaders/swellrayVertex.js";
 import * as defaultTheme from "../themes/default.json";
