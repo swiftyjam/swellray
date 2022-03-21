@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { BufferAttribute, Mesh, PerspectiveCamera, Points, Scene, Vector2, Vector3, WebGLRenderer, ShaderMaterial, Texture, Clock } from "three";
 import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
-import {fragment} from "../shaders/swellrayFragment.js";
-import {vertex} from "../shaders/swellrayVertex.js";
+import { fragment } from "../shaders/swellrayFragment.js";
+import { vertex } from "../shaders/swellrayVertex.js";
 import * as defaultTheme from "../themes/default.json";
 export class Swellray {
     container: HTMLElement
@@ -55,7 +55,7 @@ export class Swellray {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(`#${this.theme.props.colors.backgroundColor}`);
         // this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:"high-performance" });
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.container.appendChild(this.renderer.domElement);
@@ -67,7 +67,7 @@ export class Swellray {
         this.initControls();
         this.buildSea();
 
-        
+
         window.addEventListener('resize', this.onWindowResize.bind(this));
 
         this.update();
@@ -142,7 +142,7 @@ export class Swellray {
         // p_geometry.rotateY(Math.PI);
         p_geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         p_geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
-       
+
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
         this.scene.add(this.seaPlane);
@@ -175,6 +175,17 @@ export class Swellray {
     resetWaves() {
         this.waves = []
     }
+    setWaveHeight(waveIndex: number, value: number) {
+        this.waves[waveIndex].height = value
+        console.log("heyy");
+        
+    }
+    setWavePeriod(waveIndex: number, value: number) {
+        this.waves[waveIndex].period = value
+    }
+    setWaveDirection(waveIndex: number, value: number) {
+        this.waves[waveIndex].direction.setX(value)
+    }
     setWind(speed: number, direction: [number, number]) {
         const dir = new Vector2(direction[0], direction[1]);
         this.seaMaterial.uniforms.uWindSpeed.value = speed
@@ -186,7 +197,7 @@ export class Swellray {
 
         //TODO Calc max Height
     }
-    async loadBathymetry( bathymetryMapImage : string) {
+    async loadBathymetry(bathymetryMapImage: string) {
         // instantiate a loader
         let loader1 = new THREE.TextureLoader();
         // load a image resource
@@ -196,7 +207,7 @@ export class Swellray {
             const seaFloor_geometry = new THREE.PlaneGeometry(128 * this.seaSpreadScale, 128 * this.seaSpreadScale, 128, 128);
             const seaFloor_material = new THREE.MeshStandardMaterial()
             seaFloor_material.wireframe = true
-            seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`) 
+            seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
             seaFloor_material.displacementMap = this.bathymetryMap
             seaFloor_material.displacementScale = (-1) * this.seaDepthScale * 10 * 256
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
@@ -207,7 +218,7 @@ export class Swellray {
         })
 
     }
-    async loadChop( chopMapImage : string) {
+    async loadChop(chopMapImage: string) {
         let loader2 = new THREE.TextureLoader();
         await loader2.loadAsync(chopMapImage).then(image => {
             this.chopMap = image
