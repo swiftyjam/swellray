@@ -177,8 +177,6 @@ export class Swellray {
     }
     setWaveHeight(waveIndex: number, value: number) {
         this.waves[waveIndex].height = value
-        console.log("heyy");
-        
     }
     setWavePeriod(waveIndex: number, value: number) {
         this.waves[waveIndex].period = value
