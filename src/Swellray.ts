@@ -61,7 +61,7 @@ export class Swellray {
         this.container.appendChild(this.renderer.domElement);
 
 
-        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 5000);
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
         this.camera.position.set(400, 200, 0);
 
         this.initControls();
@@ -170,6 +170,8 @@ export class Swellray {
         this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale / 20;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
+        this.camera.position.set(this.controls.maxDistance/(this.camera.aspect * 8), this.controls.maxDistance/(this.camera.aspect * 4),-this.controls.maxDistance/(this.camera.aspect*2) );
+        this.controls.update();      
 
     }
     resetWaves() {
