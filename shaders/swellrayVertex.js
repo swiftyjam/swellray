@@ -37,8 +37,9 @@ const vertex = `
         
         float k=2.*PI/shallow_wavelength;
         
+        // float c=sqrt(G*vDepth);
+        // float c=sqrt((9.8 / k) * tanh(k * vDepth));
         float c=sqrt(G*vDepth);
-        
         vec2 d=normalize(wave.xy);
         float f=k*(dot(d,p.xz)-c*uTime);
         // float shoalingCoef=pow(.4466*(deep_wavelength/vDepth),.25);
@@ -49,9 +50,9 @@ const vertex = `
         float a=shoalingCoef*(steepness/k);
         
         tangent+=vec3(
-            -d.x*d.x*(steepness*sin(f)),
+            1.-d.x*d.x*(steepness*sin(f)),
             d.x*(steepness*cos(f)),
-            -d.x*d.y*(steepness*sin(f))
+            1.-d.x*d.y*(steepness*sin(f))
         );
         binormal+=vec3(
             -d.x*d.y*(steepness*sin(f)),
