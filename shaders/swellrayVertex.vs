@@ -11,7 +11,7 @@ const float PI=3.14159265;
 const float G=9.81;
 uniform vec4[5]uWaves;
 uniform float uWindSpeed;
-uniform vec2 uWindDir;
+uniform vec2 uwindDirection;
 uniform float uTime;
 uniform float uScale;
 uniform float uDepthScale;
@@ -78,9 +78,9 @@ void main(){
     vec3 p=vec3(position.xyz);
   
     float windSpeed = uWindSpeed * uScale;
-    vec2 windDir = normalize(uWindDir);
-    vec2 offset1 = windDir * uTime * 0.01 ;
-    // vec2 offset2 = vec2(windDir.x + rand(vec2(-0.5,0.5)),windDir.y + rand(vec2(-0.5,0.5))) * uTime * 0.01 ;
+    vec2 windDirection = normalize(uwindDirection);
+    vec2 offset1 = windDirection * uTime * 0.01 ;
+    // vec2 offset2 = vec2(windDirection.x + rand(vec2(-0.5,0.5)),windDirection.y + rand(vec2(-0.5,0.5))) * uTime * 0.01 ;
     float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
     // windDisplace += (texture2D(uNoiseMap, uv * uScale+ offset2).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
 

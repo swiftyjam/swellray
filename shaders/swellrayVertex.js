@@ -8,7 +8,7 @@ const vertex = `
     const float G=9.81;
     uniform vec4[5]uWaves;
     uniform float uWindSpeed;
-    uniform vec2 uWindDir;
+    uniform vec2 uwindDirection;
     uniform float uTime;
     uniform float uScale;
     uniform float uDepthScale;
@@ -76,8 +76,8 @@ const vertex = `
         vec3 p=vec3(position.xyz);
       
         float windSpeed = uWindSpeed * uScale;
-        vec2 windDir = normalize(uWindDir);
-        vec2 offset1 = windDir * uTime * 0.01 ;
+        vec2 windDirection = normalize(uwindDirection);
+        vec2 offset1 = windDirection * uTime * 0.01 ;
         float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
     
         float wcount=0.;

@@ -109,7 +109,7 @@ export class Swellray {
                 uWaves: {
                     value: [0, 0, 0.0, 0]
                 },
-                uWindDir: {
+                uwindDirection: {
                     value: null
                 },
                 uWindSpeed: {
@@ -184,12 +184,14 @@ export class Swellray {
         this.waves[waveIndex].period = value
     }
     setWaveDirection(waveIndex: number, value: number) {
-        this.waves[waveIndex].direction.setX(value)
+        this.waves[waveIndex].direction.set(Math.cos(value),1)
+        console.log(this.waves[waveIndex].direction);
+        
     }
-    setWind(speed: number, direction: [number, number]) {
-        const dir = new Vector2(direction[0], direction[1]);
+    setWind(speed: number, direction: number) {
+        const dir = new Vector2(Math.cos(direction), Math.sin(direction));
         this.seaMaterial.uniforms.uWindSpeed.value = speed
-        this.seaMaterial.uniforms.uWindDir.value = dir
+        this.seaMaterial.uniforms.uwindDirection.value = dir
     }
     addWave(period: number, direction: [number, number], height: number) {
         const dir = new Vector2(direction[0], direction[1]);
