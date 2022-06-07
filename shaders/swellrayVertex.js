@@ -19,16 +19,15 @@ const vertex = `
     varying float vSteepness;
     varying float vHeightDepthRatio;
     varying float vDisplacementY;
+
     float rand(in vec2 co){
         return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
     }
-    // float gold_noise(in vec2 xy, in float seed){
-    //        return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);
-    // }
+
     vec3 gerstnerWave(vec4 wave,vec3 p,float windDisplace,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
         
-        float vDepth=(texture2D(uDepthmap,uv).x)*256.*uDepthScale;
+        float vDepth=(1./(texture2D(uDepthmap,uv).x))*256.*uDepthScale;
         float period=wave.z;
         float height=2.*wave.w + windDisplace;
         
@@ -37,12 +36,9 @@ const vertex = `
         
         float k=2.*PI/shallow_wavelength;
         
-        // float c=sqrt(G*vDepth);
-        // float c=sqrt((9.8 / k) * tanh(k * vDepth));
         float c=sqrt(G*vDepth);
         vec2 d=normalize(wave.xy);
         float f=k*(dot(d,p.xz)-c*uTime);
-        // float shoalingCoef=pow(.4466*(deep_wavelength/vDepth),.25);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/deep_wavelength),-.25);
        
         float steepness=height/shallow_wavelength;
@@ -50,9 +46,9 @@ const vertex = `
         float a=shoalingCoef*(steepness/k);
         
         tangent+=vec3(
-            1.-d.x*d.x*(steepness*sin(f)),
+            -d.x*d.x*(steepness*sin(f)),
             d.x*(steepness*cos(f)),
-            1.-d.x*d.y*(steepness*sin(f))
+            -d.x*d.y*(steepness*sin(f))
         );
         binormal+=vec3(
             -d.x*d.y*(steepness*sin(f)),
@@ -61,7 +57,7 @@ const vertex = `
         );
         
         float vertical=min(a*cos(f),vDepth-.01);
-        vHeightDepthRatio+=abs(vertical)/vDepth;
+        vHeightDepthRatio += vDepth/abs(vertical);
         return vec3(
             d.x*(a*sin(f)),
             vertical,
@@ -90,16 +86,17 @@ const vertex = `
         }
 
         vDisplacementY=p.y;
-    
+        
+        vHeightDepthRatio = clamp(vHeightDepthRatio/wcount,0.,1.);
+         
+         if( vSteepness > .142  && vHeightDepthRatio < 0.78){
+             gl_PointSize= -vDisplacementY*vHeightDepthRatio*5.;
+         }else{
+             gl_PointSize=1.;
+         }
+        
         vNormal=normalize(cross(binormal,tangent));
-        
         vViewPosition=-mvPosition.xyz;
-        if(vNormal.z>.142&&vSteepness>.142&&vHeightDepthRatio>1.2*uDepthScale){
-            gl_PointSize=25.*vNormal.z;
-        }else{
-            gl_PointSize=1.;
-        }
-        
         gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
     }
     `

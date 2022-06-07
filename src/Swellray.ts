@@ -30,8 +30,8 @@ export class Swellray {
     seaSpreadScale: number
     seaDepthScale: number
     simulationSpeed: number
-    readonly AMOUNTX: number = 128
-    readonly AMOUNTZ: number = 128
+    readonly AMOUNTX: number = 256
+    readonly AMOUNTZ: number = 256
     readonly LIB_PATH: string
     readonly CENTERS_NUMBER = this.AMOUNTX * this.AMOUNTZ
     readonly G = 9.81
@@ -46,7 +46,7 @@ export class Swellray {
 
         this.theme = defaultTheme
         this.clock = new THREE.Clock
-        this.fps = 30
+        this.fps = 60
         this.waves = []
         this.seaSpreadScale = 0.128 * 2.
         this.seaDepthScale = 0.00256
@@ -66,7 +66,8 @@ export class Swellray {
 
         this.initControls();
         this.buildSea();
-
+        const axesHelper = new THREE.AxesHelper( 5 );
+        this.scene.add( axesHelper );
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
 
@@ -145,7 +146,7 @@ export class Swellray {
 
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
-        this.scene.add(this.seaPlane);
+         this.scene.add(this.seaPlane);
 
 
 
@@ -184,17 +185,20 @@ export class Swellray {
         this.waves[waveIndex].period = value
     }
     setWaveDirection(waveIndex: number, value: number) {
-        this.waves[waveIndex].direction.set(Math.cos(value),1)
+        value = value * Math.PI/180
+        this.waves[waveIndex].direction.set(Math.cos(value),Math.sin(value))
         console.log(this.waves[waveIndex].direction);
         
     }
     setWind(speed: number, direction: number) {
+        direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
         this.seaMaterial.uniforms.uWindSpeed.value = speed
         this.seaMaterial.uniforms.uwindDirection.value = dir
     }
-    addWave(period: number, direction: [number, number], height: number) {
-        const dir = new Vector2(direction[0], direction[1]);
+    addWave(period: number, direction: number, height: number) {
+        direction = direction * Math.PI/180;
+        const dir = new Vector2(Math.cos(direction), Math.sin(direction));
         this.waves.push(new TorochoidalWave(period, dir, height))
 
         //TODO Calc max Height
@@ -206,15 +210,15 @@ export class Swellray {
         await loader1.loadAsync(bathymetryMapImage).then(image => {
             this.bathymetryMap = image
             this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
-            const seaFloor_geometry = new THREE.PlaneGeometry(128 * this.seaSpreadScale, 128 * this.seaSpreadScale, 128, 128);
+            const seaFloor_geometry = new THREE.PlaneGeometry(256 * this.seaSpreadScale, 256 * this.seaSpreadScale, 256, 256);
             const seaFloor_material = new THREE.MeshStandardMaterial()
             seaFloor_material.wireframe = true
             seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
             seaFloor_material.displacementMap = this.bathymetryMap
-            seaFloor_material.displacementScale = (-1) * this.seaDepthScale * 10 * 256
+            seaFloor_material.displacementScale = this.seaDepthScale * 10 * 256
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
-            this.floorPlane.rotateX(-Math.PI / 2)
-            this.floorPlane.rotateZ(+Math.PI / 2)
+            this.floorPlane.rotateX(Math.PI / 2)
+            this.floorPlane.rotateZ(-Math.PI / 2)
             this.floorPlane.position.setY(0)
             this.scene.add(this.floorPlane)
         })
