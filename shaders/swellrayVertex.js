@@ -8,7 +8,8 @@ const vertex = `
     const float G=9.81;
     uniform vec4[5]uWaves;
     uniform float uWindSpeed;
-    uniform vec2 uwindDirection;
+    uniform vec2 uWindDirection;
+    varying vec2 vWindDirection;
     uniform float uTime;
     uniform float uScale;
     uniform float uDepthScale;
@@ -24,25 +25,28 @@ const vertex = `
         return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
     }
 
-    vec3 gerstnerWave(vec4 wave,vec3 p,float windDisplace,inout vec3 tangent,inout vec3 binormal){
+    vec3 gerstnerWave(vec4 wave,vec3 p,inout float windDisplace,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
-        
-        float vDepth=(1./(texture2D(uDepthmap,uv).x))*256.*uDepthScale;
+        vDepth=(1./(texture2D(uDepthmap,uv).x))*256.*uDepthScale;
         float period=wave.z;
-        float height=2.*wave.w + windDisplace;
+        float height= 2.*wave.w  ;
         
         float deep_wavelength=1.56*pow(period,2.0);
         float shallow_wavelength=period*sqrt(G*vDepth);
+
+        float steepness=height/shallow_wavelength;
+        float windSteepness = 2.*windDisplace / shallow_wavelength;
+        steepness += windSteepness;
+        vSteepness += steepness;
         
         float k=2.*PI/shallow_wavelength;
         
         float c=sqrt(G*vDepth);
-        vec2 d=normalize(wave.xy);
+        vec2 d=normalize(wave.xy + uWindDirection.xy * windSteepness);
         float f=k*(dot(d,p.xz)-c*uTime);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/deep_wavelength),-.25);
        
-        float steepness=height/shallow_wavelength;
-        vSteepness+=steepness;
+
         float a=shoalingCoef*(steepness/k);
         
         tangent+=vec3(
@@ -57,7 +61,6 @@ const vertex = `
         );
         
         float vertical=min(a*cos(f),vDepth-.01);
-        vHeightDepthRatio += vDepth/abs(vertical);
         return vec3(
             d.x*(a*sin(f)),
             vertical,
@@ -65,16 +68,18 @@ const vertex = `
         );
     }
     
+    
     void main(){
         vec3 tangent=vec3(1.,0.,0.);
         vec3 binormal=vec3(0.,0.,1.);
-        float avgW=0.;
+  
         vec3 p=vec3(position.xyz);
       
-        float windSpeed = uWindSpeed * uScale;
-        vec2 windDirection = normalize(uwindDirection);
-        vec2 offset1 = windDirection * uTime * 0.01 ;
-        float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windSpeed - windSpeed/2.) / (1.+uScale) ;
+     
+       
+        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G;
+        vec2 offset1 = uWindDirection * uTime * 0.01 ;
+        float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windWaveHeight ) ;
     
         float wcount=0.;
         for(int i=0;i<uWaves.length();i++){
@@ -85,12 +90,12 @@ const vertex = `
             }
         }
 
-        vDisplacementY=p.y;
-        
-        vHeightDepthRatio = clamp(vHeightDepthRatio/wcount,0.,1.);
-         
-         if( vSteepness > .142  && vHeightDepthRatio < 0.78){
-             gl_PointSize= -vDisplacementY*vHeightDepthRatio*5.;
+        vDisplacementY= -p.y;
+        vSteepness = vSteepness / wcount;
+        vHeightDepthRatio = vDisplacementY / vDepth;
+
+         if( vSteepness > .142  && vHeightDepthRatio > 0.78){
+             gl_PointSize= pow(min(vHeightDepthRatio,2.),min(vDisplacementY,2.));
          }else{
              gl_PointSize=1.;
          }

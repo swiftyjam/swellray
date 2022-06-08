@@ -48,13 +48,12 @@ export class Swellray {
         this.clock = new THREE.Clock
         this.fps = 60
         this.waves = []
-        this.seaSpreadScale = 0.128 * 2.
+        this.seaSpreadScale = 0.256 * .5
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(`#${this.theme.props.colors.backgroundColor}`);
-        // this.scene.fog = new THREE.FogExp2(0xa14, 0.00001);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -110,7 +109,7 @@ export class Swellray {
                 uWaves: {
                     value: [0, 0, 0.0, 0]
                 },
-                uwindDirection: {
+                uWindDirection: {
                     value: null
                 },
                 uWindSpeed: {
@@ -187,18 +186,20 @@ export class Swellray {
     setWaveDirection(waveIndex: number, value: number) {
         value = value * Math.PI/180
         this.waves[waveIndex].direction.set(Math.cos(value),Math.sin(value))
-        console.log(this.waves[waveIndex].direction);
+        // console.log(this.waves[waveIndex].direction);
         
     }
     setWind(speed: number, direction: number) {
         direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
+        console.log("wind",dir);
         this.seaMaterial.uniforms.uWindSpeed.value = speed
-        this.seaMaterial.uniforms.uwindDirection.value = dir
+        this.seaMaterial.uniforms.uWindDirection.value = [dir.x,dir.y]
     }
     addWave(period: number, direction: number, height: number) {
         direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
+        console.log("sea",dir);
         this.waves.push(new TorochoidalWave(period, dir, height))
 
         //TODO Calc max Height
