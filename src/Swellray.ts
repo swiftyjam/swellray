@@ -48,7 +48,7 @@ export class Swellray {
         this.clock = new THREE.Clock
         this.fps = 60
         this.waves = []
-        this.seaSpreadScale = 0.256 * .5
+        this.seaSpreadScale = 0.256 * 1.
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
         this.delta = 0
