@@ -186,20 +186,17 @@ export class Swellray {
     setWaveDirection(waveIndex: number, value: number) {
         value = value * Math.PI/180
         this.waves[waveIndex].direction.set(Math.cos(value),Math.sin(value))
-        // console.log(this.waves[waveIndex].direction);
-        
+     
     }
     setWind(speed: number, direction: number) {
         direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
-        console.log("wind",dir);
         this.seaMaterial.uniforms.uWindSpeed.value = speed
         this.seaMaterial.uniforms.uWindDirection.value = [dir.x,dir.y]
     }
     addWave(period: number, direction: number, height: number) {
         direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
-        console.log("sea",dir);
         this.waves.push(new TorochoidalWave(period, dir, height))
 
         //TODO Calc max Height
