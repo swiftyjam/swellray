@@ -48,7 +48,7 @@ export class Swellray {
         this.clock = new THREE.Clock
         this.fps = 60
         this.waves = []
-        this.seaSpreadScale = 0.256 * 1.
+        this.seaSpreadScale = 0.256 * 0.5
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
         this.delta = 0
@@ -192,7 +192,7 @@ export class Swellray {
         direction = direction * Math.PI/180;
         const dir = new Vector2(Math.cos(direction), Math.sin(direction));
         this.seaMaterial.uniforms.uWindSpeed.value = speed
-        this.seaMaterial.uniforms.uWindDirection.value = [dir.x,dir.y]
+        this.seaMaterial.uniforms.uWindDirection.value = dir
     }
     addWave(period: number, direction: number, height: number) {
         direction = direction * Math.PI/180;

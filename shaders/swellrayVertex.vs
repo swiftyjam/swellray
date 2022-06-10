@@ -31,7 +31,7 @@ float rand(in vec2 co){
 vec3 gerstnerWave(vec4 wave,vec3 p,float windDisplace,inout vec3 tangent,inout vec3 binormal){
     vUv=uv;
     
-    float vDepth=(texture2D(uDepthmap,uv).x)*256.*uDepthScale;
+    float vDepth=(texture2D(uDepthmap,uv).x)*255.*uDepthScale;
     float period=wave.z;
     float height=2.*wave.w + windDisplace;
     

@@ -9,6 +9,7 @@ precision highp float;
     varying float vHeightDepthRatio;
     varying vec2 vWindDirection;
     uniform sampler2D uDepthmap;
+    uniform float uDepthScale;
     uniform vec3 u_low_color;
     uniform vec3 u_high_color;
     uniform float u_color_offset;
@@ -25,7 +26,7 @@ precision highp float;
 
         gl_FragColor=color;
 
-        if( vSteepness > .142  && vHeightDepthRatio > 0.78){ 
+        if( vSteepness > .142  && vHeightDepthRatio > 1.78){ 
             gl_FragColor=breakColor;
         }
         return;
