@@ -18,7 +18,7 @@ precision highp float;
     void main(){
         //  if(length(gl_PointCoord-vec2(.5,.5))>.475)discard;
 
-        float mix_strength = vHeightDepthRatio;
+        float mix_strength = vHeightDepthRatio/2.;
 
         vec4 breakColor = vec4(mix(u_low_color,vec3(.9,.9,1.),vHeightDepthRatio/4.),1.);
         

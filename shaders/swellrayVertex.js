@@ -29,20 +29,20 @@ const vertex = `
         vUv=uv;
         vDepth=(1.-(texture2D(uDepthmap,uv).x))*255.*uDepthScale;
         float period=wave.z;
-        float height= 2.*wave.w  + windDisplace;
+        float height= wave.w ;
         
         float deep_wavelength=1.56*pow(period,2.0);
         float shallow_wavelength=period*sqrt(G*vDepth);
 
         float steepness=height / shallow_wavelength;
-        float windSteepness = windDisplace / shallow_wavelength;
+        float windSteepness = windDisplace / 4. ;
         steepness += windSteepness;
         vSteepness += steepness;
         
         float k=2.*PI/shallow_wavelength;
         
         float c=sqrt(G*vDepth);
-        vec2 d=normalize(wave.xy + (vWindDirection * windDisplace));
+        vec2 d=normalize(vec2(wave.x,-wave.y)+ (vWindDirection * windDisplace));
         float f=k*(dot(d,p.xz)-c*uTime);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/deep_wavelength),-.25);
        
@@ -60,10 +60,10 @@ const vertex = `
             -d.y*d.y*(a*sin(f))
         );
         
-        float vertical=min(a*cos(f),vDepth-.01);
+        float vertical=min(a*cos(f),vDepth + 2. * uScale);
         return vec3(
             d.x*(a*sin(f)),
-            vertical,
+            vertical - windDisplace / 2.,
             d.y*(a*sin(f))
         );
     }
@@ -78,8 +78,9 @@ const vertex = `
      
     
         float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G;
-        vec2 offset1 = vec2(uWindDirection.x,uWindDirection.y) * uTime * 0.01 ;
-        float windDisplace = (texture2D(uNoiseMap, uv * uScale + offset1).r * windWaveHeight ) ;
+        vWindDirection = vec2(uWindDirection.x,-uWindDirection.y);
+        vec2 offset1 =  vec2(uWindDirection.x,-uWindDirection.y) * uTime * 0.001 ;
+        float windDisplace = (texture2D(uNoiseMap, uv * uScale - offset1).r * windWaveHeight )  ;
     
         float wcount=0.;
         for(int i=0;i<uWaves.length();i++){
