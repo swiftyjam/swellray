@@ -29,7 +29,7 @@ const vertex = `
         vUv=uv;
         vDepth=(1.-(texture2D(uDepthmap,uv).x))*255.*uDepthScale;
         float period=wave.z;
-        float height= 2.*wave.w  ;
+        float height= 2.*wave.w  + windDisplace;
         
         float deep_wavelength=1.56*pow(period,2.0);
         float shallow_wavelength=period*sqrt(G*vDepth);
@@ -47,7 +47,7 @@ const vertex = `
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/deep_wavelength),-.25);
        
 
-        float a=shoalingCoef*(steepness/k)+ windDisplace;
+        float a=shoalingCoef*(steepness/k);
         
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
@@ -63,7 +63,7 @@ const vertex = `
         float vertical=min(a*cos(f),vDepth-.01);
         return vec3(
             d.x*(a*sin(f)),
-            vertical + windDisplace,
+            vertical,
             d.y*(a*sin(f))
         );
     }
