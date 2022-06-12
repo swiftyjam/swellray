@@ -284,10 +284,10 @@ export class Swellray {
         let outside = false
         const baseOffset = 0
         const offset = {
-            right: baseOffset + element.offsetWidth ,
+            right: baseOffset + element.offsetWidth  ,
             top: baseOffset + element.offsetHeight ,
             bottom: baseOffset  + element.offsetWidth,
-            left: baseOffset
+            left: baseOffset+ element.offsetWidth 
         }
 
         if (coords.x > this.renderer.domElement.width - offset.right) {
