@@ -26,6 +26,10 @@ export class Swellray {
     chopMap: Texture
     seaMaterial: ShaderMaterial
     seaCenters: BufferAttribute
+    letCompass: any
+    windDirection: number
+    swellDirection: number
+    secondarySwellDirection: number
 
     seaSpreadScale: number
     seaDepthScale: number
@@ -44,10 +48,17 @@ export class Swellray {
     }
     async init() {
 
+        this.letCompass = {
+            cardinals: [],
+            directions: []
+        }
         this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.fps = 60
         this.waves = []
+        this.windDirection = 0
+        this.swellDirection = 0
+        this.secondarySwellDirection = 0
         this.seaSpreadScale = 0.256 * 1
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
@@ -55,18 +66,17 @@ export class Swellray {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(`#${this.theme.props.colors.backgroundColor}`);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(this.container.clientWidth,this.container.clientHeight);
+        // this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
+
 
 
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
         this.camera.position.set(400, 200, 0);
-
+        this.initCompass();
         this.initControls();
         this.buildSea();
-        const axesHelper = new THREE.AxesHelper( 5 );
-        this.scene.add( axesHelper );
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
 
@@ -145,7 +155,7 @@ export class Swellray {
 
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
-         this.scene.add(this.seaPlane);
+        this.scene.add(this.seaPlane);
 
 
 
@@ -159,6 +169,17 @@ export class Swellray {
         this.seaCenters = this.dots.geometry.attributes.position.clone()
 
     }
+    initCompass() {
+        const c = document.getElementsByClassName('compassComponent')
+        Array.prototype.forEach.call(c, (element: any) => {
+            this.letCompass.cardinals.push(element)
+        });
+        const d = document.getElementsByClassName('compassDirection')
+        Array.prototype.forEach.call(d, (element: any) => {
+            this.letCompass.directions.push(element)
+        });
+
+    }
     initControls() {
         // controls
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -170,8 +191,8 @@ export class Swellray {
         this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale / 20;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
-        this.camera.position.set(this.controls.maxDistance/(this.camera.aspect * 8), this.controls.maxDistance/(this.camera.aspect * 4),-this.controls.maxDistance/(this.camera.aspect*2) );
-        this.controls.update();      
+        this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 8), this.controls.maxDistance / (this.camera.aspect * 4), -this.controls.maxDistance / (this.camera.aspect * 2));
+        this.controls.update();
 
     }
     resetWaves() {
@@ -184,21 +205,31 @@ export class Swellray {
         this.waves[waveIndex].period = value
     }
     setWaveDirection(waveIndex: number, value: number) {
-        value = value * Math.PI/180
-        this.waves[waveIndex].direction.set(Math.cos(value),Math.sin(value))
-     
+
+        if(waveIndex == 0){
+            this.swellDirection = value * Math.PI / 180;;
+        } else if (waveIndex == 1) {
+            this.secondarySwellDirection = value * Math.PI / 180;;
+        }
+        value = value * Math.PI / 180
+        this.waves[waveIndex].direction.set(Math.cos(value), Math.sin(value))
+
     }
     setWind(speed: number, direction: number) {
-        direction = direction * Math.PI/180;
-        const dir = new Vector2(Math.cos(direction), Math.sin(direction));
+        this.windDirection = direction * Math.PI / 180;
+        const dir = new Vector2(Math.cos( this.windDirection), Math.sin( this.windDirection));
         this.seaMaterial.uniforms.uWindSpeed.value = speed
         this.seaMaterial.uniforms.uWindDirection.value = dir
     }
     addWave(period: number, direction: number, height: number) {
-        direction = direction * Math.PI/180;
-        const dir = new Vector2(Math.cos(direction), Math.sin(direction));
-        this.waves.push(new TorochoidalWave(period, dir, height))
 
+        direction = direction * Math.PI / 180;
+        this.waves.push(new TorochoidalWave(period, direction, height))
+        if(this.waves.length == 1){
+            this.swellDirection = direction;
+        } else if (this.waves.length == 2) {
+            this.secondarySwellDirection = direction;
+        }
         //TODO Calc max Height
     }
     async loadBathymetry(bathymetryMapImage: string) {
@@ -217,7 +248,7 @@ export class Swellray {
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.floorPlane.rotateX(-Math.PI / 2)
             this.floorPlane.rotateZ(Math.PI / 2)
-            this.floorPlane.position.setY(-seaFloor_material.displacementScale -1)
+            this.floorPlane.position.setY(-seaFloor_material.displacementScale - 1)
             this.scene.add(this.floorPlane)
         })
 
@@ -232,19 +263,88 @@ export class Swellray {
     }
     onWindowResize() {
 
-        this.camera.aspect = this.container.offsetWidth / this.container.offsetHeight;
+        this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.container.offsetWidth, this.container.offsetHeight);
-        // this.renderer.setPixelRatio( this.container.offsetWidth / this.container.offsetHeight);
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        console.log(this.container.offsetTop,this.container.scrollTop);
+        
 
     }
+    toScreenPosition(coord: Vector3) {
+        const widthHalf = 0.5 * this.renderer.domElement.width;
+        const heightHalf = 0.5 * this.renderer.domElement.height;
+        coord.project(this.camera);
+        coord.x = (coord.x * widthHalf) + widthHalf;
+        coord.y = - (coord.y * heightHalf) + heightHalf;
+    };
+    moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean) {
+        const centerToCamera = this.camera.position.distanceTo(new Vector3())
+        const cardinalToCamera = this.camera.position.distanceTo(coords)
+        this.toScreenPosition(coords);
+        let outside = false
+        const baseOffset = 0
+        const offset = {
+            right: baseOffset + element.offsetWidth ,
+            top: baseOffset + element.offsetHeight ,
+            bottom: baseOffset  + element.offsetWidth,
+            left: baseOffset
+        }
 
+        if (coords.x > this.renderer.domElement.width - offset.right) {
+            coords.x = this.renderer.domElement.width - offset.right
+            // outside = true
+        } else if (coords.x < offset.left) {
+            coords.x = offset.left
+            // outside = true
+        }
+
+        if (coords.y > this.renderer.domElement.height - offset.bottom) {
+            coords.y = this.renderer.domElement.height - offset.bottom
+            //  outside = true
+        } else if (coords.y < offset.top) {
+            coords.y = offset.top
+            //  outside = true
+        }
+
+
+
+
+        if (element.classList[0] === 'compassComponent' || 'compassData') {
+            if (lockY) {
+                if (centerToCamera > cardinalToCamera) {
+                    outside = true
+                }
+                coords.y = offset.top
+            }
+            element.style.opacity = outside ? '0.0' : '1.0'
+            element.style.pointerEvents = 'none'
+
+        }
+        element.style.transform = 'translate3d(' + coords.x + 'px,' + coords.y + 'px, 0)'
+
+
+    }
 
     updateControls() {
         this.controls.update();
     }
+    updateCompass() {
+        let r = 0
+        const compassDistance = this.seaSpreadScale * this.AMOUNTX
+
+        this.letCompass.cardinals.forEach((cardinal: HTMLElement) => {
+            this.moveTag(cardinal, new Vector3(-compassDistance * Math.cos(r), 20, compassDistance * Math.sin(r)), true, false)
+            r += Math.PI / 4
+        });
+
+        this.moveTag(this.letCompass.directions[0], new Vector3(-compassDistance * Math.cos(this.swellDirection), 20, -compassDistance * Math.sin(this.swellDirection)), true, false)
+        this.moveTag(this.letCompass.directions[1], new Vector3(-compassDistance * Math.cos(this.secondarySwellDirection), 20, -compassDistance * Math.sin(this.secondarySwellDirection)), true, false)
+        this.moveTag(this.letCompass.directions[2], new Vector3(-compassDistance * Math.cos(this.windDirection), 20, -compassDistance * Math.sin(this.windDirection)), true, false)
+
+    }
     update() {
         this.updateControls()
+        this.updateCompass()
         requestAnimationFrame(this.update.bind(this));
         this.delta += this.clock.getDelta()
         if (this.delta > 1 / this.fps) {
