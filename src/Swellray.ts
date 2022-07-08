@@ -59,7 +59,7 @@ export class Swellray {
         this.windDirection = 0
         this.swellDirection = 0
         this.secondarySwellDirection = 0
-        this.seaSpreadScale = 0.256 * 1
+        this.seaSpreadScale = 0.256 * 0.75
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
         this.delta = 0
