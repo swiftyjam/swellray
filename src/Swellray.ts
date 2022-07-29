@@ -199,26 +199,26 @@ export class Swellray {
         this.waves = []
     }
     setWaveHeight(waveIndex: number, value: number) {
-        this.waves[waveIndex].height = value
+        this.waves[waveIndex].height = (value == (null || 0 ) || this.waves[waveIndex].period ==  (null || 0 )) ? 0 : value
     }
     setWavePeriod(waveIndex: number, value: number) {
-        this.waves[waveIndex].period = value
+        this.waves[waveIndex].period = value == null ? 0.00001 : value
     }
     setWaveDirection(waveIndex: number, value: number) {
 
         if(waveIndex == 0){
-            this.swellDirection = value * Math.PI / 180;;
+            this.swellDirection = value == null ? 0 : value * Math.PI / 180;;
         } else if (waveIndex == 1) {
-            this.secondarySwellDirection = value * Math.PI / 180;;
+            this.secondarySwellDirection = value == null ? 0 : value * Math.PI / 180;;
         }
         value = value * Math.PI / 180
         this.waves[waveIndex].direction.set(Math.cos(value), Math.sin(value))
 
     }
     setWind(speed: number, direction: number) {
-        this.windDirection = direction * Math.PI / 180;
+        this.windDirection = direction == null ? 0 : direction * Math.PI / 180;
         const dir = new Vector2(Math.cos( this.windDirection), Math.sin( this.windDirection));
-        this.seaMaterial.uniforms.uWindSpeed.value = speed
+        this.seaMaterial.uniforms.uWindSpeed.value = speed == null ? 0 : speed
         this.seaMaterial.uniforms.uWindDirection.value = dir
     }
     addWave(period: number, direction: number, height: number) {
