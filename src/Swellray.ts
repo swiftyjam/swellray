@@ -208,17 +208,19 @@ export class Swellray {
     }
     setSpotOrientation(value: number){
         this.spotOrientation = value == null ? 0 : value * Math.PI / 180;
+        console.log("Spot orientation", this.spotOrientation, value);
+        
     }
     setWaveDirection(waveIndex: number, value: number) {
 
-        if(waveIndex == 0){
-            this.swellDirection = value == null ? 0 : value * Math.PI / 180 - this.spotOrientation;
+        const convertedValue =  value == null ? 0 : value * Math.PI / 180 - this.spotOrientation
+        if(waveIndex == 0){ //TODO: To reduce code, maybe use this.waveDirections as an array and take advantage of using index so you dont have to use if else
+            this.swellDirection = convertedValue;
+            this.waves[waveIndex].direction.set(Math.cos( this.swellDirection), Math.sin( this.swellDirection))
         } else if (waveIndex == 1) {
-            this.secondarySwellDirection = value == null ? 0 : value * Math.PI / 180 - this.spotOrientation;
+            this.secondarySwellDirection = convertedValue;
+            this.waves[waveIndex].direction.set(Math.cos( this.secondarySwellDirection), Math.sin( this.secondarySwellDirection))
         }
-        value = value * Math.PI / 180
-        this.waves[waveIndex].direction.set(Math.cos(value), Math.sin(value))
-
     }
     setWind(speed: number, direction: number) {
         this.windDirection = direction == null ? 0 : direction * Math.PI / 180 - this.spotOrientation;
@@ -335,7 +337,7 @@ export class Swellray {
         this.controls.update();
     }
     updateCompass() {
-        let r = 0 - this.spotOrientation
+        let r = 0 + this.spotOrientation
         const compassDistance = this.seaSpreadScale * this.AMOUNTX
 
         this.letCompass.cardinals.forEach((cardinal: HTMLElement) => {
