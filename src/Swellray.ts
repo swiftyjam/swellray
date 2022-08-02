@@ -30,6 +30,7 @@ export class Swellray {
     windDirection: number
     swellDirection: number
     secondarySwellDirection: number
+    spotOrientation: number
 
     seaSpreadScale: number
     seaDepthScale: number
@@ -59,6 +60,7 @@ export class Swellray {
         this.windDirection = 0
         this.swellDirection = 0
         this.secondarySwellDirection = 0
+        this.spotOrientation = 0
         this.seaSpreadScale = 0.256 * 0.75
         this.seaDepthScale = 0.00256
         this.simulationSpeed = 1
@@ -204,19 +206,22 @@ export class Swellray {
     setWavePeriod(waveIndex: number, value: number) {
         this.waves[waveIndex].period = value == null ? 0.00001 : value
     }
+    setSpotOrientation(value: number){
+        this.spotOrientation = value == null ? 0 : value * Math.PI / 180;
+    }
     setWaveDirection(waveIndex: number, value: number) {
 
         if(waveIndex == 0){
-            this.swellDirection = value == null ? 0 : value * Math.PI / 180;;
+            this.swellDirection = value == null ? 0 : value * Math.PI / 180 - this.spotOrientation;
         } else if (waveIndex == 1) {
-            this.secondarySwellDirection = value == null ? 0 : value * Math.PI / 180;;
+            this.secondarySwellDirection = value == null ? 0 : value * Math.PI / 180 - this.spotOrientation;
         }
         value = value * Math.PI / 180
         this.waves[waveIndex].direction.set(Math.cos(value), Math.sin(value))
 
     }
     setWind(speed: number, direction: number) {
-        this.windDirection = direction == null ? 0 : direction * Math.PI / 180;
+        this.windDirection = direction == null ? 0 : direction * Math.PI / 180 - this.spotOrientation;
         const dir = new Vector2(Math.cos( this.windDirection), Math.sin( this.windDirection));
         this.seaMaterial.uniforms.uWindSpeed.value = speed == null ? 0 : speed
         this.seaMaterial.uniforms.uWindDirection.value = dir
@@ -277,6 +282,7 @@ export class Swellray {
         coord.x = (coord.x * widthHalf) + widthHalf;
         coord.y = - (coord.y * heightHalf) + heightHalf;
     };
+
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean) {
         const centerToCamera = this.camera.position.distanceTo(new Vector3())
         const cardinalToCamera = this.camera.position.distanceTo(coords)
@@ -329,7 +335,7 @@ export class Swellray {
         this.controls.update();
     }
     updateCompass() {
-        let r = 0
+        let r = 0 - this.spotOrientation
         const compassDistance = this.seaSpreadScale * this.AMOUNTX
 
         this.letCompass.cardinals.forEach((cardinal: HTMLElement) => {
