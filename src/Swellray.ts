@@ -367,9 +367,12 @@ export class Swellray {
             this.delta %= (1 / this.fps)
         }
     }
-
+    destroy() {
+        this.renderer.forceContextLoss()
+    }
     render() {
         this.renderer.render(this.scene, this.camera);
     }
+   
 }
 
