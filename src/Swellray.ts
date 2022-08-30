@@ -239,6 +239,12 @@ export class Swellray {
         }
         //TODO Calc max Height
     }
+    async setBathymetry(bathymetryMapImage: string) {
+        this.scene.remove(this.floorPlane)
+        console.log(bathymetryMapImage);
+        
+        this.loadBathymetry(bathymetryMapImage)
+    }
     async loadBathymetry(bathymetryMapImage: string) {
         // instantiate a loader
         let loader1 = new THREE.TextureLoader();
