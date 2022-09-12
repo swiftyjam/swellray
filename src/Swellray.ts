@@ -35,8 +35,10 @@ export class Swellray {
     seaSpreadScale: number
     seaDepthScale: number
     simulationSpeed: number
-    readonly AMOUNTX: number = 256
-    readonly AMOUNTZ: number = 256
+
+    readonly MAGIC_N: number = 256
+    readonly AMOUNTX: number = this.MAGIC_N
+    readonly AMOUNTZ: number = this.MAGIC_N
     readonly LIB_PATH: string
     readonly CENTERS_NUMBER = this.AMOUNTX * this.AMOUNTZ
     readonly G = 9.81
@@ -61,8 +63,8 @@ export class Swellray {
         this.swellDirection = 0
         this.secondarySwellDirection = 0
         this.spotOrientation = 0
-        this.seaSpreadScale = 0.256 * 0.75
-        this.seaDepthScale = 0.00256
+        this.seaSpreadScale = 1. // 1 = 256m
+        this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
@@ -257,11 +259,11 @@ export class Swellray {
             seaFloor_material.wireframe = true
             seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
             seaFloor_material.displacementMap = this.bathymetryMap
-            seaFloor_material.displacementScale = 6.
+            seaFloor_material.displacementScale = this.seaDepthScale
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.floorPlane.rotateX(-Math.PI / 2)
             this.floorPlane.rotateZ(Math.PI / 2)
-            this.floorPlane.position.setY(-seaFloor_material.displacementScale - 1)
+            this.floorPlane.position.setY(-1 * this.seaDepthScale)
             this.scene.add(this.floorPlane)
         })
 
