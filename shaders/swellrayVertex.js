@@ -73,7 +73,7 @@ const vertex = `
         );
         
 
-        float vertical = min(a*cos(f), vDepth - uScale  );
+        float vertical = min(a*cos(f), vDepth - uScale - 0.1  );
         vertical = vertical - windDisplace;
         vSteepness += (-vertical) / calculatedWavelength ;
         return vec3(
