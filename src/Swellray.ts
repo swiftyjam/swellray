@@ -63,7 +63,7 @@ export class Swellray {
         this.swellDirection = 0
         this.secondarySwellDirection = 0
         this.spotOrientation = 0
-        this.seaSpreadScale = 1. // 1 = 256m
+        this.seaSpreadScale = 0.8 // 1 = 256m
         this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m
         this.simulationSpeed = 1
         this.delta = 0
@@ -124,6 +124,9 @@ export class Swellray {
                     value: [0, 0, 0.0, 0]
                 },
                 uWindDirection: {
+                    value: null
+                },
+                uSpotOrientation: {
                     value: null
                 },
                 uWindSpeed: {
@@ -209,13 +212,14 @@ export class Swellray {
         this.waves[waveIndex].period = value == null ? 0.00001 : value
     }
     setSpotOrientation(value: number){
-        this.spotOrientation = value == null ? 0 : value * Math.PI / 180;
-        console.log("Spot orientation", this.spotOrientation, value);
+        this.spotOrientation = value == null ? 0 :- value * Math.PI / 180;
+        const dir = new Vector2(Math.cos( this.spotOrientation), Math.sin( this.spotOrientation));
+        this.seaMaterial.uniforms.uSpotOrientation.value = dir
         
     }
     setWaveDirection(waveIndex: number, value: number) {
 
-        const convertedValue =  value == null ? 0 : value * Math.PI / 180 - this.spotOrientation
+        const convertedValue =  value == null ? 0 : value * Math.PI / 180 
         if(waveIndex == 0){ //TODO: To reduce code, maybe use this.waveDirections as an array and take advantage of using index so you dont have to use if else
             this.swellDirection = convertedValue;
             this.waves[waveIndex].direction.set(Math.cos( this.swellDirection), Math.sin( this.swellDirection))
@@ -225,7 +229,7 @@ export class Swellray {
         }
     }
     setWind(speed: number, direction: number) {
-        this.windDirection = direction == null ? 0 : direction * Math.PI / 180 - this.spotOrientation;
+        this.windDirection = direction == null ? 0 : direction * Math.PI / 180;
         const dir = new Vector2(Math.cos( this.windDirection), Math.sin( this.windDirection));
         this.seaMaterial.uniforms.uWindSpeed.value = speed == null ? 0 : speed
         this.seaMaterial.uniforms.uWindDirection.value = dir
@@ -243,8 +247,6 @@ export class Swellray {
     }
     async setBathymetry(bathymetryMapImage: string) {
         this.scene.remove(this.floorPlane)
-        console.log(bathymetryMapImage);
-        
         this.loadBathymetry(bathymetryMapImage)
     }
     async loadBathymetry(bathymetryMapImage: string) {
@@ -281,9 +283,6 @@ export class Swellray {
         this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-        console.log(this.container.offsetTop,this.container.scrollTop);
-        
-
     }
     toScreenPosition(coord: Vector3) {
         const widthHalf = 0.5 * this.renderer.domElement.width;

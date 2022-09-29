@@ -9,6 +9,7 @@ const vertex = `
     uniform vec4[5]uWaves;
     uniform float uWindSpeed;
     uniform vec2 uWindDirection;
+    uniform vec2 uSpotOrientation;
     varying vec2 vWindDirection;
     uniform float uTime;
     uniform float uScale;
@@ -54,13 +55,12 @@ const vertex = `
         float k = w / calculatedSpeed;
         
         float c= calculatedSpeed;
-        vec2 d=normalize(vec2(wave.x,-wave.y)+ (vWindDirection * windDisplace));
+        vec2 d = normalize(vec2(wave.x,-wave.y) + (vWindDirection * windDisplace));
         float f=k*(dot(d,p.xz)-c*uTime);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/calculatedWavelength),-.25);
-       
-
-        float a = shoalingCoef*(steepness/k);
         
+        float a =  (steepness/k) * length(uSpotOrientation.xy + d.xy)/2.;
+       
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),
@@ -73,8 +73,8 @@ const vertex = `
         );
         
 
-        float vertical = min(a*cos(f), vDepth -1. * uScale );
-        vertical = vertical - windDisplace / 2.;
+        float vertical = min(a*cos(f), vDepth - uScale  );
+        vertical = vertical - windDisplace;
         vSteepness += (-vertical) / calculatedWavelength ;
         return vec3(
             d.x*(a*sin(f)),
@@ -92,10 +92,9 @@ const vertex = `
       
      
     
-        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G;
+        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G * length(uSpotOrientation.xy + uWindDirection.xy)/4.;
         vWindDirection = vec2(uWindDirection.x,-uWindDirection.y);
-        vec2 offset1 =  vec2(uWindDirection.x,-uWindDirection.y) * uTime * 0.001 ;
-        float windDisplace = (texture2D(uNoiseMap, uv * uScale - offset1).r * windWaveHeight )  ;
+        float windDisplace = (texture2D(uNoiseMap, uv  ).r * windWaveHeight * uScale )  ;
     
         float wcount=0.;
         for(int i=0;i<uWaves.length();i++){
@@ -107,11 +106,11 @@ const vertex = `
         }
 
         vDisplacementY= -p.y;
-        vSteepness = vSteepness / wcount;
+        vSteepness = vSteepness ;
         vHeightDepthRatio = (vDisplacementY) / (vDepth);
 
          if( vSteepness > 0.142 && vHeightDepthRatio > .78){
-             gl_PointSize= pow(min(vHeightDepthRatio,4.),min(vDisplacementY,2.));
+             gl_PointSize= pow(min(vHeightDepthRatio,2.),min(vDisplacementY,2.));
          }else{
              gl_PointSize=1.;
          }

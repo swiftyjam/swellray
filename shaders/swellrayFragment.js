@@ -26,7 +26,7 @@ precision highp float;
 
         gl_FragColor=color;
 
-        if(  vHeightDepthRatio > .78){ 
+        if(  vSteepness > 0.132 && vHeightDepthRatio > .78){ 
             gl_FragColor=breakColor;
         }
         return;
