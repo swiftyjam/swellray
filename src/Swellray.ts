@@ -261,11 +261,11 @@ export class Swellray {
             seaFloor_material.wireframe = true
             seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
             seaFloor_material.displacementMap = this.bathymetryMap
-            seaFloor_material.displacementScale = this.seaDepthScale
+            seaFloor_material.displacementScale = this.seaDepthScale * 2.5
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.floorPlane.rotateX(-Math.PI / 2)
             this.floorPlane.rotateZ(Math.PI / 2)
-            this.floorPlane.position.setY(-1 * this.seaDepthScale)
+            this.floorPlane.position.setY(-1.5 * this.seaDepthScale * 2.5)
             this.scene.add(this.floorPlane)
         })
 
