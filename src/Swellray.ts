@@ -14,7 +14,8 @@ export class Swellray {
     mouse: Vector2
     raycaster: Raycaster
     intersectionPlane : Plane
-    ruler: Group
+    pointer: Vector3
+    ruler:Group
     clock: Clock
     controls: OrbitControls
     dots: Points
@@ -31,6 +32,7 @@ export class Swellray {
     seaMaterial: ShaderMaterial
     seaCenters: BufferAttribute
     letCompass: any
+    rulerElements: any
     windDirection: number
     swellDirection: number
     secondarySwellDirection: number
@@ -67,7 +69,7 @@ export class Swellray {
         this.swellDirection = 0
         this.secondarySwellDirection = 0
         this.spotOrientation = 0
-        this.seaSpreadScale = 1.0 // 1 = 256m
+        this.seaSpreadScale = 0.5 // 1 = 256m
         this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m
         this.simulationSpeed = 1
         this.delta = 0
@@ -82,7 +84,7 @@ export class Swellray {
 
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
         this.camera.position.set(400, 200, 0);
-        this.ruler = new THREE.Group()
+        this.pointer = new Vector3()
         this.raycaster = new THREE.Raycaster()
         this.intersectionPlane = new Plane(new THREE.Vector3(0,1,0),0);
         this.mouse = new THREE.Vector2()
@@ -185,41 +187,61 @@ export class Swellray {
 
     }
     buildLegends() {
-        const axesHelper = new THREE.AxesHelper( 50 );
-        this.scene.add( axesHelper );
-        //**HEIHGTMARK */((
+        // const axesHelper = new THREE.AxesHelper( 50 );
+        // this.scene.add( axesHelper );
+        //**HEIHGTMARK */ 
         this.ruler = new THREE.Group()
         const scale =  this.seaSpreadScale
-        const material = new THREE.LineBasicMaterial( {
-            color: 0xba3375,
-            linewidth: 2,
+        const material = new THREE.MeshBasicMaterial( {
+            color: 0xaafeff,
+            transparent: true,
+            opacity: 0.5
+            // linewidth: 2,
         } );
         const units = 20
         const heightmarkPoints = [];
-        heightmarkPoints.push( new THREE.Vector3(0, -units * this.seaSpreadScale / 2,0) );
-        heightmarkPoints.push( new THREE.Vector3(0, units * this.seaSpreadScale / 2,0) );
+        heightmarkPoints.push( new THREE.Vector3(0, -units / this.seaSpreadScale / 2,0) );
+        heightmarkPoints.push( new THREE.Vector3(0, units / this.seaSpreadScale / 2,0) );
         
         const geometry = new THREE.BufferGeometry().setFromPoints( heightmarkPoints );
-        const heightmarkLine = new THREE.Line( geometry, material );
-
-       
+        const heightmarkLine = new THREE.Line( geometry, material ); 
        let unitcounter = units ;
+       this.rulerElements = [];
 
+       let eachCut = 4
        while (unitcounter > -units ){
-        console.log(unitcounter);
+        if(unitcounter % 2  == 0 && eachCut == 4){
+           eachCut = 0
+            const span = document.createElement("span")
+            span.innerHTML=`🠐 ${unitcounter/2}m`
+            span.className = "rulerComponent"
+            if(unitcounter < 1){
+            span.classList.add("bottom")
+            }else{
+            span.classList.add("upper")
+            }
+            span.id=`ruler-${unitcounter}`
+            span.style.position="absolute"
+            this.container.appendChild(span)
+            this.rulerElements.push(
+            document.getElementById(`ruler-${unitcounter}`) ,
+            )
+        }
+        eachCut ++
         
         const divisionWide = [];
         const divisionMid = [];
-        divisionWide.push( new THREE.Vector3(0 , ( unitcounter * this.seaSpreadScale)/2 , 0) );
-        divisionWide.push( new THREE.Vector3(0 , ( unitcounter * this.seaSpreadScale)/2 , (unitcounter % 2 == 0 ? 5 : unitcounter == 0 ? 10 : 2)) );
+        divisionWide.push( new THREE.Vector3(0 , ( unitcounter / this.seaSpreadScale)/2 , 0) );
+        divisionWide.push( new THREE.Vector3(0 , ( unitcounter / this.seaSpreadScale)/2 , (unitcounter % 2 == 0 ? 5 : unitcounter == 0 ? 10 : 2)) );
         const geometry = new THREE.BufferGeometry().setFromPoints( divisionWide );
         const division = new THREE.Line( geometry, material );
-        unitcounter--;
         this.ruler.add(division)
+        unitcounter--;
        }
-       this.ruler.add(heightmarkLine)
+    //    this.ruler.add(heightmarkLine)
        this.scene.add( this.ruler )
       // this.ruler.position.set(0,0,0)
+       //**END HEIGHTMARK */
 
        
     }
@@ -298,7 +320,7 @@ export class Swellray {
     }
     async loadBathymetry(bathymetryMapImage: string) {
         // instantiate a loader
-        let loader1 = new THREE.TextureLoader();
+        const loader1 = new THREE.TextureLoader();
         // load a image resource
         await loader1.loadAsync(bathymetryMapImage).then(image => {
             this.bathymetryMap = image
@@ -318,7 +340,7 @@ export class Swellray {
 
     }
     async loadChop(chopMapImage: string) {
-        let loader2 = new THREE.TextureLoader();
+        const loader2 = new THREE.TextureLoader();
         await loader2.loadAsync(chopMapImage).then(image => {
             this.chopMap = image
             this.chopMap.wrapT = this.chopMap.wrapS = THREE.RepeatWrapping
@@ -348,7 +370,9 @@ export class Swellray {
         const intersection = new THREE.Vector3()
         this.raycaster.setFromCamera(this.mouse,this.camera)
         this.raycaster.ray.intersectPlane(this.intersectionPlane,intersection)
+        this.pointer.set(intersection.x,intersection.y,intersection.z)
         this.ruler.position.set(intersection.x,intersection.y,intersection.z)
+        this.updatePointer()
     };
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean) {
         const centerToCamera = this.camera.position.distanceTo(new Vector3())
@@ -415,9 +439,15 @@ export class Swellray {
         this.moveTag(this.letCompass.directions[2], new Vector3(-compassDistance * Math.cos(this.windDirection), 20, -compassDistance * Math.sin(this.windDirection)), true, false)
 
     }
+    updatePointer(){
+        this.rulerElements.forEach((line: HTMLElement,index:Number ) => {
+            this.moveTag(line, new THREE.Vector3(this.pointer.x,(2*(5-index) / this.seaSpreadScale), this.pointer.z ) , false, false)
+        });
+    }
     update() {
         this.updateControls()
         this.updateCompass()
+    
         requestAnimationFrame(this.update.bind(this));
         this.delta += this.clock.getDelta()
         if (this.delta > 1 / this.fps) {
