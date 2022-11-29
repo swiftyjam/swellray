@@ -182,7 +182,7 @@ export class Swellray {
 
         this.dots = new THREE.Points(d_geometry, this.seaMaterial);
         this.dots.rotateX(Math.PI)
-        // this.scene.add(this.dots);
+        this.scene.add(this.dots);
         this.seaCenters = this.dots.geometry.attributes.position.clone()
 
     }

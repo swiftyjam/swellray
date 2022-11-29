@@ -43,12 +43,12 @@ const vertex = `
             calculatedSpeed = (G*period / 2.*PI) * tanh((2.*PI*vDepth) / calculatedWavelength);
             calculatedWavelength = (G*pow(period,2.) / 2.*PI) * tanh((2.*PI*vDepth) / calculatedWavelength);
         }else if(wdRatio <= 0.05){
-            calculatedSpeed = sqrt(G*vDepth);
-            calculatedWavelength = sqrt(G*vDepth*period);
+            calculatedSpeed =sqrt(G*vDepth);
+            calculatedWavelength = sqrt(2.*G*vDepth*period);
         }
       
         float steepness = height / calculatedWavelength;
-        float windSteepness = windDisplace / 4. ;
+        float windSteepness = windDisplace / 2. ;
         steepness += windSteepness;
         
            
@@ -59,7 +59,7 @@ const vertex = `
         float f=k*(dot(d,p.xz)-c*uTime);
         float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/calculatedWavelength),-.25);
         
-        float a =  (steepness/k) * length(uSpotOrientation.xy + d.xy)/2.;
+        float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
        
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
@@ -73,7 +73,8 @@ const vertex = `
         );
         
 
-        float vertical = min(a*cos(f), vDepth - uScale - 0.1  );
+        float vertical = min(a*cos(f), vDepth );
+        //float vertical = a*cos(f);
         vertical = vertical - windDisplace;
         vSteepness += (-vertical) / calculatedWavelength ;
         return vec3(
@@ -110,7 +111,7 @@ const vertex = `
         vHeightDepthRatio = (vDisplacementY) / (vDepth);
 
          if( vSteepness > 0.142 && vHeightDepthRatio > .78){
-             gl_PointSize= pow(min(vHeightDepthRatio,2.),min(vDisplacementY,2.));
+             gl_PointSize= pow(min(vHeightDepthRatio,2.),2.);
          }else{
              gl_PointSize=1.;
          }
