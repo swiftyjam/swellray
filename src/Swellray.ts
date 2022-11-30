@@ -36,6 +36,7 @@ export class Swellray {
     seaCenters: BufferAttribute
     letCompass: any
     rulerElements: any
+    floorElements: any
     windDirection: number
     swellDirection: number
     secondarySwellDirection: number
@@ -156,7 +157,6 @@ export class Swellray {
                 u_color_offset: { value: 1 },
                 u_color_multiplier: { value: 1.5 },
 
-                resolution: { value: new THREE.Vector2() }
 
             },
             wireframe: false,
@@ -190,7 +190,8 @@ export class Swellray {
 
     }
     buildLegends() {
-        const axesHelper = new THREE.AxesHelper( 50 );
+        const axesHelper = new THREE.AxesHelper( 5/this.seaSpreadScale );
+        axesHelper.position.set(-this.AMOUNTX*this.seaSpreadScale/2 - 1.75,0,this.AMOUNTX*this.seaSpreadScale/2+ 1.75)
         this.scene.add( axesHelper );
         //**HEIHGTMARK */ 
         this.ruler = new THREE.Group()
@@ -237,6 +238,7 @@ export class Swellray {
         //**END HEIGHTMARK */
 
         //**FLOOR MEASSURE */ 
+        this.floorElements = [];
         this.extensionMeasure = new THREE.Group()
         const m2 = new THREE.MeshBasicMaterial({
             color: 0x0124b4,
@@ -247,17 +249,31 @@ export class Swellray {
         pointGroup3.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
         pointGroup3.push(new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX)/2 ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
         const g3 = new THREE.BufferGeometry().setFromPoints(pointGroup3);
-        this.extensionMeasure.add(new THREE.Line(g3, m2));
+        // this.extensionMeasure.add(new THREE.Line(g3, m2));
         const cells = this.AMOUNTX * this.seaSpreadScale
         unitcounter = cells;
 
+        eachCut = 0
         while (unitcounter > 0) {
+             if (eachCut == 8) {
+                eachCut = 0
+                const span = document.createElement("span")
+                span.innerHTML = `🠐 ${unitcounter}m`
+                span.className = "floorMeasureComponent"
+                span.id = `floor-${unitcounter}`
+                span.style.position = "absolute"
+                this.container.appendChild(span)
+                this.floorElements.push(
+                    document.getElementById(`floor-${unitcounter}`),
+                )
+            }
             const pointGroup4 = [];
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 5));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 -4));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - (eachCut == 0 ? 12 : 8)));
             const g4 = new THREE.BufferGeometry().setFromPoints(pointGroup4);
             this.extensionMeasure.add(new THREE.Line(g4, m1));
             unitcounter--;
+            eachCut++;
         }
         this.scene.add(this.extensionMeasure)
 
@@ -342,16 +358,28 @@ export class Swellray {
         await loader1.loadAsync(bathymetryMapImage).then(image => {
             this.bathymetryMap = image
             this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
-            const seaFloor_geometry = new THREE.PlaneGeometry(256 * this.seaSpreadScale, 256 * this.seaSpreadScale, 256, 256);
-            const seaFloor_material = new THREE.MeshStandardMaterial()
-            seaFloor_material.wireframe = false
-            seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
-            seaFloor_material.displacementMap = this.bathymetryMap
-            seaFloor_material.displacementScale = this.seaDepthScale * 2.5
+            const seaFloor_geometry =  new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
+
+            const seaFloor_material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uScale: {
+                        value: this.seaSpreadScale
+                    },
+                    uDepthScale: {
+                        value: this.seaDepthScale
+                    },
+                    uDepthmap: {
+                        value: this.bathymetryMap
+                    },
+                },
+                vertexShader: floorVertex,
+                fragmentShader: floorFragment
+            });
+            
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.floorPlane.rotateX(-Math.PI / 2)
             this.floorPlane.rotateZ(Math.PI / 2)
-            this.floorPlane.position.setY(-1.5 * this.seaDepthScale * 2.5)
+            this.floorPlane.position.setY(-1.5 * this.seaDepthScale)
             this.scene.add(this.floorPlane)
         })
 
@@ -461,10 +489,15 @@ export class Swellray {
             this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 * (5 - index) / this.seaSpreadScale), this.pointer.z), false, false)
         });
     }
+    updateFloorMeasure(){
+        this.floorElements.forEach((line: HTMLElement, index: Number) => {
+            this.moveTag(line, new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX)/2 - 4*(this.floorElements.length - index)/ this.seaSpreadScale ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15), false, false)
+        });
+    }
     update() {
         this.updateControls()
         this.updateCompass()
-
+        this.updateFloorMeasure()
         requestAnimationFrame(this.update.bind(this));
         this.delta += this.clock.getDelta()
         if (this.delta > 1 / this.fps) {
