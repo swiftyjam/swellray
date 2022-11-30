@@ -4,6 +4,8 @@ import { OrbitControls } from '../tools/OrbitControls.js';
 import { TorochoidalWave } from "./TorochoidalWave";
 import { fragment } from "../shaders/swellrayFragment.js";
 import { vertex } from "../shaders/swellrayVertex.js";
+import { floorFragment } from "../shaders/floorFragment.js"
+import { floorVertex } from "../shaders/floorVertex.js"
 import * as defaultTheme from "../themes/default.json";
 export class Swellray {
     container: HTMLElement
@@ -13,9 +15,10 @@ export class Swellray {
     cameraType: string
     mouse: Vector2
     raycaster: Raycaster
-    intersectionPlane : Plane
+    intersectionPlane: Plane
     pointer: Vector3
-    ruler:Group
+    ruler: Group
+    extensionMeasure: Group
     clock: Clock
     controls: OrbitControls
     dots: Points
@@ -69,14 +72,14 @@ export class Swellray {
         this.swellDirection = 0
         this.secondarySwellDirection = 0
         this.spotOrientation = 0
-        this.seaSpreadScale = 0.5 // 1 = 256m
+        this.seaSpreadScale = 0.5 // 1 = 256m 0.5 = 128m ...
         this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(`#${this.theme.props.colors.backgroundColor}`);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        this.renderer.setSize(this.container.clientWidth,this.container.clientHeight);
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         // this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
 
@@ -86,14 +89,14 @@ export class Swellray {
         this.camera.position.set(400, 200, 0);
         this.pointer = new Vector3()
         this.raycaster = new THREE.Raycaster()
-        this.intersectionPlane = new Plane(new THREE.Vector3(0,1,0),0);
+        this.intersectionPlane = new Plane(new THREE.Vector3(0, 1, 0), 0);
         this.mouse = new THREE.Vector2()
         this.initCompass();
         this.initControls();
         this.buildSea();
         this.buildLegends();
         window.addEventListener('resize', this.onWindowResize.bind(this));
-        window.addEventListener('pointermove', this.onPointerMove.bind(this), )
+        window.addEventListener('pointermove', this.onPointerMove.bind(this),)
         this.update();
         this.onWindowResize();
 
@@ -172,7 +175,7 @@ export class Swellray {
 
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
-         this.scene.add(this.seaPlane);
+        this.scene.add(this.seaPlane);
 
 
 
@@ -187,63 +190,77 @@ export class Swellray {
 
     }
     buildLegends() {
-        // const axesHelper = new THREE.AxesHelper( 50 );
-        // this.scene.add( axesHelper );
+        const axesHelper = new THREE.AxesHelper( 50 );
+        this.scene.add( axesHelper );
         //**HEIHGTMARK */ 
         this.ruler = new THREE.Group()
-        const scale =  this.seaSpreadScale
-        const material = new THREE.MeshBasicMaterial( {
-            color: 0xaafeff,
+        const m1 = new THREE.LineBasicMaterial({
+            color: 0x0124b4,
             transparent: true,
-            opacity: 0.5
-            // linewidth: 2,
-        } );
+            opacity: 1,
+            linewidth: 10,
+        });
         const units = 20
-        const heightmarkPoints = [];
-        heightmarkPoints.push( new THREE.Vector3(0, -units / this.seaSpreadScale / 2,0) );
-        heightmarkPoints.push( new THREE.Vector3(0, units / this.seaSpreadScale / 2,0) );
-        
-        const geometry = new THREE.BufferGeometry().setFromPoints( heightmarkPoints );
-        const heightmarkLine = new THREE.Line( geometry, material ); 
-       let unitcounter = units ;
-       this.rulerElements = [];
-
-       let eachCut = 4
-       while (unitcounter > -units ){
-        if(unitcounter % 2  == 0 && eachCut == 4){
-           eachCut = 0
-            const span = document.createElement("span")
-            span.innerHTML=`🠐 ${unitcounter/2}m`
-            span.className = "rulerComponent"
-            if(unitcounter < 1){
-            span.classList.add("bottom")
-            }else{
-            span.classList.add("upper")
-            }
-            span.id=`ruler-${unitcounter}`
-            span.style.position="absolute"
-            this.container.appendChild(span)
-            this.rulerElements.push(
-            document.getElementById(`ruler-${unitcounter}`) ,
-            )
-        }
-        eachCut ++
-        
-        const divisionWide = [];
-        const divisionMid = [];
-        divisionWide.push( new THREE.Vector3(0 , ( unitcounter / this.seaSpreadScale)/2 , 0) );
-        divisionWide.push( new THREE.Vector3(0 , ( unitcounter / this.seaSpreadScale)/2 , (unitcounter % 2 == 0 ? 5 : unitcounter == 0 ? 10 : 2)) );
-        const geometry = new THREE.BufferGeometry().setFromPoints( divisionWide );
-        const division = new THREE.Line( geometry, material );
-        this.ruler.add(division)
-        unitcounter--;
-       }
-    //    this.ruler.add(heightmarkLine)
-       this.scene.add( this.ruler )
-      // this.ruler.position.set(0,0,0)
-       //**END HEIGHTMARK */
-
        
+        let unitcounter = units;
+        this.rulerElements = [];
+
+        let eachCut = 4
+        while (unitcounter > -units) {
+            if (unitcounter % 2 == 0 && eachCut == 4) {
+                eachCut = 0
+                const span = document.createElement("span")
+                span.innerHTML = `🠐 ${unitcounter / 2}m`
+                span.className = "rulerComponent"
+                if (unitcounter < 1) {
+                    span.classList.add("bottom")
+                } else {
+                    span.classList.add("upper")
+                }
+                span.id = `ruler-${unitcounter}`
+                span.style.position = "absolute"
+                this.container.appendChild(span)
+                this.rulerElements.push(
+                    document.getElementById(`ruler-${unitcounter}`),
+                )
+            }
+            eachCut++
+
+            const pointGroup2 = [];
+            pointGroup2.push(new THREE.Vector3(0, (unitcounter / this.seaSpreadScale) / 2, 0));
+            pointGroup2.push(new THREE.Vector3(0, (unitcounter / this.seaSpreadScale) / 2, (unitcounter % 2 == 0 ? 5 : unitcounter == 0 ? 10 : 2)));
+            const g2 = new THREE.BufferGeometry().setFromPoints(pointGroup2);
+            this.ruler.add(new THREE.Line(g2, m1));
+            unitcounter--;
+        }
+        this.scene.add(this.ruler)
+        //**END HEIGHTMARK */
+
+        //**FLOOR MEASSURE */ 
+        this.extensionMeasure = new THREE.Group()
+        const m2 = new THREE.MeshBasicMaterial({
+            color: 0x0124b4,
+            transparent: true,
+            opacity: 1
+        });
+        const pointGroup3 = [];
+        pointGroup3.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
+        pointGroup3.push(new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX)/2 ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
+        const g3 = new THREE.BufferGeometry().setFromPoints(pointGroup3);
+        this.extensionMeasure.add(new THREE.Line(g3, m2));
+        const cells = this.AMOUNTX * this.seaSpreadScale
+        unitcounter = cells;
+
+        while (unitcounter > 0) {
+            const pointGroup4 = [];
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 5));
+            const g4 = new THREE.BufferGeometry().setFromPoints(pointGroup4);
+            this.extensionMeasure.add(new THREE.Line(g4, m1));
+            unitcounter--;
+        }
+        this.scene.add(this.extensionMeasure)
+
     }
     initCompass() {
         const c = document.getElementsByClassName('compassComponent')
@@ -275,31 +292,31 @@ export class Swellray {
         this.waves = []
     }
     setWaveHeight(waveIndex: number, value: number) {
-        this.waves[waveIndex].height = (value == (null || 0 ) || this.waves[waveIndex].period ==  (null || 0 )) ? 0 : value
+        this.waves[waveIndex].height = (value == (null || 0) || this.waves[waveIndex].period == (null || 0)) ? 0 : value
     }
     setWavePeriod(waveIndex: number, value: number) {
         this.waves[waveIndex].period = value == null ? 0.00001 : value
     }
-    setSpotOrientation(value: number){
-        this.spotOrientation = value == null ? 0 :- value * Math.PI / 180;
-        const dir = new Vector2(Math.cos( this.spotOrientation), Math.sin( this.spotOrientation));
+    setSpotOrientation(value: number) {
+        this.spotOrientation = value == null ? 0 : - value * Math.PI / 180;
+        const dir = new Vector2(Math.cos(this.spotOrientation), Math.sin(this.spotOrientation));
         this.seaMaterial.uniforms.uSpotOrientation.value = dir
-        
+
     }
     setWaveDirection(waveIndex: number, value: number) {
 
-        const convertedValue =  value == null ? 0 : value * Math.PI / 180 
-        if(waveIndex == 0){ //TODO: To reduce code, maybe use this.waveDirections as an array and take advantage of using index so you dont have to use if else
+        const convertedValue = value == null ? 0 : value * Math.PI / 180
+        if (waveIndex == 0) { //TODO: To reduce code, maybe use this.waveDirections as an array and take advantage of using index so you dont have to use if else
             this.swellDirection = convertedValue;
-            this.waves[waveIndex].direction.set(Math.cos( this.swellDirection), Math.sin( this.swellDirection))
+            this.waves[waveIndex].direction.set(Math.cos(this.swellDirection), Math.sin(this.swellDirection))
         } else if (waveIndex == 1) {
             this.secondarySwellDirection = convertedValue;
-            this.waves[waveIndex].direction.set(Math.cos( this.secondarySwellDirection), Math.sin( this.secondarySwellDirection))
+            this.waves[waveIndex].direction.set(Math.cos(this.secondarySwellDirection), Math.sin(this.secondarySwellDirection))
         }
     }
     setWind(speed: number, direction: number) {
         this.windDirection = direction == null ? 0 : direction * Math.PI / 180;
-        const dir = new Vector2(Math.cos( this.windDirection), Math.sin( this.windDirection));
+        const dir = new Vector2(Math.cos(this.windDirection), Math.sin(this.windDirection));
         this.seaMaterial.uniforms.uWindSpeed.value = speed == null ? 0 : speed
         this.seaMaterial.uniforms.uWindDirection.value = dir
     }
@@ -307,7 +324,7 @@ export class Swellray {
 
         direction = direction * Math.PI / 180;
         this.waves.push(new TorochoidalWave(period, direction, height))
-        if(this.waves.length == 1){
+        if (this.waves.length == 1) {
             this.swellDirection = direction;
         } else if (this.waves.length == 2) {
             this.secondarySwellDirection = direction;
@@ -327,7 +344,7 @@ export class Swellray {
             this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
             const seaFloor_geometry = new THREE.PlaneGeometry(256 * this.seaSpreadScale, 256 * this.seaSpreadScale, 256, 256);
             const seaFloor_material = new THREE.MeshStandardMaterial()
-            seaFloor_material.wireframe = true
+            seaFloor_material.wireframe = false
             seaFloor_material.emissive = new THREE.Color(`#${this.theme.props.colors.seaFloorColor}`)
             seaFloor_material.displacementMap = this.bathymetryMap
             seaFloor_material.displacementScale = this.seaDepthScale * 2.5
@@ -363,15 +380,15 @@ export class Swellray {
         coord.x = (coord.x * widthHalf) + widthHalf;
         coord.y = - (coord.y * heightHalf) + heightHalf;
     };
-    moveRulerToPointer(e) {      
+    moveRulerToPointer(e) {
         const rect = this.container.getBoundingClientRect();
-        this.mouse.x = ((e.clientX-rect.left)/this.container.clientWidth)*2-1;
-        this.mouse.y = -((e.clientY-rect.top)/this.container.clientHeight)*2+1;
+        this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
+        this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
         const intersection = new THREE.Vector3()
-        this.raycaster.setFromCamera(this.mouse,this.camera)
-        this.raycaster.ray.intersectPlane(this.intersectionPlane,intersection)
-        this.pointer.set(intersection.x,intersection.y,intersection.z)
-        this.ruler.position.set(intersection.x,intersection.y,intersection.z)
+        this.raycaster.setFromCamera(this.mouse, this.camera)
+        this.raycaster.ray.intersectPlane(this.intersectionPlane, intersection)
+        this.pointer.set(intersection.x, intersection.y, intersection.z)
+        this.ruler.position.set(intersection.x, intersection.y, intersection.z)
         this.updatePointer()
     };
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean) {
@@ -381,10 +398,10 @@ export class Swellray {
         let outside = false
         const baseOffset = 0
         const offset = {
-            right: baseOffset + element.offsetWidth  ,
-            top: baseOffset + element.offsetHeight ,
-            bottom: baseOffset  + element.offsetWidth,
-            left: baseOffset+ element.offsetWidth 
+            right: baseOffset + element.offsetWidth,
+            top: baseOffset + element.offsetHeight,
+            bottom: baseOffset + element.offsetWidth,
+            left: baseOffset + element.offsetWidth
         }
 
         if (coords.x > this.renderer.domElement.width - offset.right) {
@@ -439,15 +456,15 @@ export class Swellray {
         this.moveTag(this.letCompass.directions[2], new Vector3(-compassDistance * Math.cos(this.windDirection), 20, -compassDistance * Math.sin(this.windDirection)), true, false)
 
     }
-    updatePointer(){
-        this.rulerElements.forEach((line: HTMLElement,index:Number ) => {
-            this.moveTag(line, new THREE.Vector3(this.pointer.x,(2*(5-index) / this.seaSpreadScale), this.pointer.z ) , false, false)
+    updatePointer() {
+        this.rulerElements.forEach((line: HTMLElement, index: Number) => {
+            this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 * (5 - index) / this.seaSpreadScale), this.pointer.z), false, false)
         });
     }
     update() {
         this.updateControls()
         this.updateCompass()
-    
+
         requestAnimationFrame(this.update.bind(this));
         this.delta += this.clock.getDelta()
         if (this.delta > 1 / this.fps) {
@@ -468,6 +485,6 @@ export class Swellray {
     render() {
         this.renderer.render(this.scene, this.camera);
     }
-   
+
 }
 
