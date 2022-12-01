@@ -384,8 +384,10 @@ export class Swellray {
         //TODO Calc max Height
     }
     async setBathymetry(bathymetryMapImage: string) {
+        if(this.floorPlane !== undefined && this.floorPlane !== null ){
         await this.scene.remove(this.floorPlane)
-        this.loadBathymetry(bathymetryMapImage)
+        }
+        this.loadBathymetry(bathymetryMapImage);
     }
     async loadBathymetry(bathymetryMapImage: string) {
         // this.scene.remove(this.floorPlane)
