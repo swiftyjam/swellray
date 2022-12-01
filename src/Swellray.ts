@@ -390,8 +390,6 @@ export class Swellray {
         this.loadBathymetry(bathymetryMapImage);
     }
     async loadBathymetry(bathymetryMapImage: string) {
-        // this.scene.remove(this.floorPlane)
-        // instantiate a loader
         const loader1 = new THREE.TextureLoader();
         // load a image resource
         await loader1.loadAsync(bathymetryMapImage).then(image => {
