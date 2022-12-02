@@ -80,7 +80,7 @@ export class Swellray {
         this.seaSpreadScale = 0.5// 1 = 256m 0.5 = 128m ...
         this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m //!LEAVE THIS VALUE UNTIL WE CHANGE DEPTH SYSTEM
         this.seaFloorVisAugment = 2.5 // This value stretches the floor height visually to make it easier to interpretate
-        this.floorPosition = -0 * this.seaFloorVisAugment
+        this.floorPosition = -2.5 * this.seaFloorVisAugment
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
@@ -197,20 +197,7 @@ export class Swellray {
 
     }
     buildLegends() {
-        // const axesHelper = new THREE.AxesHelper( this.AMOUNTX*this.seaSpreadScale );
-        // axesHelper.position.set(-this.AMOUNTX*this.seaSpreadScale/2 ,this.floorPosition, -this.AMOUNTX*this.seaSpreadScale/2)
-        // this.scene.add( axesHelper );
-
-        const dir = new THREE.Vector3( 0, 1, 0 );
-        //normalize the direction vector (convert to vector of length 1)
-        dir.normalize();
-
-        const origin = new THREE.Vector3( 0, 0, 0 );
-        const length = 2 ;
-        const hex = 0xffff00;
-
-        const arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
-        this.scene.add( arrowHelper );
+  
         //**HEIHGTMARK */
         this.upperRuler = new THREE.Group()
         const m1 = new THREE.LineBasicMaterial({
