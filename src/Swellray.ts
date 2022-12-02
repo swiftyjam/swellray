@@ -77,10 +77,10 @@ export class Swellray {
         this.swellDirection = 0
         this.secondarySwellDirection = 0
         this.spotOrientation = 0
-        this.seaSpreadScale = 0.5 // 1 = 256m 0.5 = 128m ...
+        this.seaSpreadScale = 0.5// 1 = 256m 0.5 = 128m ...
         this.seaDepthScale = 10 // 1 means each 1% of B = 0.1m //!LEAVE THIS VALUE UNTIL WE CHANGE DEPTH SYSTEM
         this.seaFloorVisAugment = 2.5 // This value stretches the floor height visually to make it easier to interpretate
-        this.floorPosition = -3* this.seaDepthScale
+        this.floorPosition = -0 * this.seaFloorVisAugment
         this.simulationSpeed = 1
         this.delta = 0
         this.scene = new THREE.Scene();
@@ -114,7 +114,7 @@ export class Swellray {
         const positions = new Float32Array(this.CENTERS_NUMBER * 3);
         const scales = new Float32Array(this.CENTERS_NUMBER);
         let i = 0, j = 0;
-        
+
         for (let ix = 0; ix < this.AMOUNTX; ix++) {
 
             for (let iz = 0; iz < this.AMOUNTZ; iz++) {
@@ -176,7 +176,7 @@ export class Swellray {
 
 
         const p_geometry = new THREE.PlaneGeometry(this.AMOUNTX / this.seaSpreadScale, this.AMOUNTZ / this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
-        
+
         p_geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         p_geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
 
@@ -197,21 +197,21 @@ export class Swellray {
 
     }
     buildLegends() {
-        const axesHelper = new THREE.AxesHelper( this.AMOUNTX*this.seaSpreadScale );
-        axesHelper.position.set(-this.AMOUNTX*this.seaSpreadScale/2 ,this.floorPosition, -this.AMOUNTX*this.seaSpreadScale/2)
-        this.scene.add( axesHelper );
+        // const axesHelper = new THREE.AxesHelper( this.AMOUNTX*this.seaSpreadScale );
+        // axesHelper.position.set(-this.AMOUNTX*this.seaSpreadScale/2 ,this.floorPosition, -this.AMOUNTX*this.seaSpreadScale/2)
+        // this.scene.add( axesHelper );
 
         const dir = new THREE.Vector3( 0, 1, 0 );
         //normalize the direction vector (convert to vector of length 1)
         dir.normalize();
 
         const origin = new THREE.Vector3( 0, 0, 0 );
-        const length = 1 / this.seaSpreadScale;
+        const length = 2 ;
         const hex = 0xffff00;
 
         const arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
         this.scene.add( arrowHelper );
-        //**HEIHGTMARK */ 
+        //**HEIHGTMARK */
         this.upperRuler = new THREE.Group()
         const m1 = new THREE.LineBasicMaterial({
             color: 0xffffff,
@@ -220,7 +220,7 @@ export class Swellray {
             linewidth: 1,
         });
         let units = 12
-       
+
         let unitcounter = 0;
         let eachCut = 0
 
@@ -239,11 +239,11 @@ export class Swellray {
                     document.getElementById(`upperRuler-${unitcounter}`),
                 )
             }
-            
+
 
             const pointGroup2 = [];
-            pointGroup2.push(new THREE.Vector3(0, (unitcounter / this.seaSpreadScale), 0));
-            pointGroup2.push(new THREE.Vector3(0, (unitcounter / this.seaSpreadScale), (eachCut == 0 ? 8 : 3)));
+            pointGroup2.push(new THREE.Vector3(0, (unitcounter), 0));
+            pointGroup2.push(new THREE.Vector3(0, (unitcounter), (eachCut == 0 ? 8 : 3)));
             const g2 = new THREE.BufferGeometry().setFromPoints(pointGroup2);
             this.upperRuler.add(new THREE.Line(g2, m1));
             eachCut++
@@ -270,7 +270,7 @@ export class Swellray {
                     document.getElementById(`lowerRuler-${unitcounter}`),
                 )
             }
-            
+
 
             const pointGroup2 = [];
             pointGroup2.push(new THREE.Vector3(0, this.floorPosition - (unitcounter * this.seaFloorVisAugment), 0));
@@ -283,7 +283,7 @@ export class Swellray {
         this.scene.add(this.lowerRuler)
         //**END HEIGHTMARK */
 
-        //**FLOOR MEASSURE */ 
+        //**FLOOR MEASSURE */
         this.floorElements = [];
         this.extensionMeasure = new THREE.Group()
         const cells = this.AMOUNTX * this.seaSpreadScale
@@ -302,11 +302,11 @@ export class Swellray {
                 this.floorElements.unshift(
                     document.getElementById(`floor-${unitcounter}`),
                 )
-               
+
             }
             const pointGroup4 = [];
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter/this.seaSpreadScale ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 -4));
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter/this.seaSpreadScale ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - (eachCut == 0 ? 12 : 8)));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 -4));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - (eachCut == 0 ? 12 : 8)));
             const g4 = new THREE.BufferGeometry().setFromPoints(pointGroup4);
             this.extensionMeasure.add(new THREE.Line(g4, m1));
             unitcounter++;
@@ -415,7 +415,7 @@ export class Swellray {
                 vertexShader: floorVertex,
                 fragmentShader: floorFragment
             });
-            
+
             this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
             this.floorPlane.rotateX(-Math.PI / 2)
             this.floorPlane.rotateZ(Math.PI / 2)
@@ -527,7 +527,7 @@ export class Swellray {
     }
     updatePointer() {
         this.upperRulerElements.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 *(this.upperRulerElements.length - index) / this.seaSpreadScale), this.pointer.z), false, false,true)
+            this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 *(this.upperRulerElements.length - index)), this.pointer.z), false, false,true)
         });
          this.lowerRulerElements.forEach((line: HTMLElement, index: Number) => {
             this.moveTag(line, new THREE.Vector3(this.pointer.x, this.floorPosition - ((this.lowerRulerElements.length - index) * this.seaFloorVisAugment), this.pointer.z), false, false,true)
@@ -535,7 +535,7 @@ export class Swellray {
     }
     updateFloorMeasure(){
         this.floorElements.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3((-this.seaSpreadScale * this.AMOUNTX)/2 + 4*(this.floorElements.length - index)/ this.seaSpreadScale ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15), false, false,true)
+            this.moveTag(line, new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX)/2 - 8*(this.floorElements.length - index),0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15), false, false,true)
         });
     }
     update() {

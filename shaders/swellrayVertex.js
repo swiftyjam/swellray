@@ -30,7 +30,7 @@ const vertex = `
         vUv=uv;
         vDepth=(1.-(texture2D(uDepthmap,uv).x)) * uDepthScale;
         float period= wave.z;
-        float height= 2.* wave.w  ;
+        float height= wave.w  ;
         float w = 2.*PI / period ; 
 
         float calculatedWavelength = G*pow(period,2.) / 2.*PI;
@@ -44,20 +44,19 @@ const vertex = `
             calculatedWavelength = (G*pow(period,2.) / 2.*PI) * tanh((2.*PI*vDepth) / calculatedWavelength);
         }else if(wdRatio <= 0.05){
             calculatedSpeed =sqrt(G*vDepth);
-            calculatedWavelength = sqrt(2.*G*vDepth*period);
+            calculatedWavelength = sqrt(G*vDepth*period);
         }
       
         float steepness = height / calculatedWavelength;
-        float windSteepness = windDisplace / 2. ;
+        float windSteepness = windDisplace  ;
         steepness += windSteepness;
         
            
         float k = w / calculatedSpeed;
         
-        float c= calculatedSpeed;
+        float c = calculatedSpeed;
         vec2 d = normalize(vec2(wave.x,-wave.y) + (vWindDirection * windDisplace));
-        float f=k*(dot(d,p.xz)-c*uTime);
-        float shoalingCoef=pow(8.*PI,-.25)*pow((vDepth/calculatedWavelength),-.25);
+        float f = k*(dot(d,p.xz)-c*uTime);
         
         float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
        
@@ -108,7 +107,7 @@ const vertex = `
 
         vDisplacementY= -p.y;
         vSteepness = vSteepness ;
-        vHeightDepthRatio = (vDisplacementY) / (vDepth);
+        vHeightDepthRatio = 2.*(vDisplacementY) / (vDepth);
 
          if( vSteepness > 0.142 && vHeightDepthRatio > .78){
              gl_PointSize= pow(min(vHeightDepthRatio,2.),2.);
