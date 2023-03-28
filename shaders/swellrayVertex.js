@@ -28,7 +28,9 @@ const vertex = `
 
     vec3 gerstnerWave(vec4 wave,vec3 p,inout float windDisplace,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
-        vDepth=(1.-(texture2D(uDepthmap,uv).x)) * uDepthScale;
+       
+        
+        vDepth=(1.-(texture2D(uDepthmap, vec2(1.- vUv.y,1.- vUv.x)).x)) * uDepthScale;
         float period= wave.z;
         float height= wave.w  ;
         float w = 2.*PI / period ; 

@@ -9,12 +9,12 @@ const floorVertex = `
     varying float vDepth;
     varying vec2 vUv;
     void main(){
-        vUv=uv;
-        vDepth=(1.-(texture2D(uDepthmap,uv).x));
+        vUv = uv;
+        vec3 newPosition = position;
         vec3 p=vec3(position.xyz);
-        p.z = p.z - vDepth * uDepthScale * uFloorAugment ;
-        vViewPosition=-mvPosition.xyz;
-        gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
+        vDepth=(1.-(texture2D(uDepthmap, vec2(vUv.x, 1.0 - vUv.y)).x));
+        p.z = p.z - vDepth * uDepthScale * uFloorAugment;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
     }
     `
 export { floorVertex }

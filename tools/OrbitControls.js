@@ -844,7 +844,7 @@ class OrbitControls extends EventDispatcher {
         function onMouseDown(event) {
 
             // Prevent the browser from scrolling.
-            event.preventDefault();
+            // event.preventDefault();
 
             // Manually set the focus since calling preventDefault above
             // prevents the browser from setting it automatically.

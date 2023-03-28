@@ -7,6 +7,7 @@ import { vertex } from "../shaders/swellrayVertex.js";
 import { floorFragment } from "../shaders/floorFragment.js"
 import { floorVertex } from "../shaders/floorVertex.js"
 import * as defaultTheme from "../themes/default.json";
+import { Sculptor } from './Sculptor.js';
 export class Swellray {
     container: HTMLElement
     scene: Scene
@@ -46,9 +47,15 @@ export class Swellray {
 
     seaSpreadScale: number
     seaDepthScale: number
-    seaFloorVisAugment : number
+    seaFloorVisAugment: number
     floorPosition: number
     simulationSpeed: number
+
+    sculptor: Sculptor
+
+    mode: Array<string>
+    selectedMode: string
+    isMouseDown: boolean
 
     readonly MAGIC_N: number = 256
     readonly AMOUNTX: number = this.MAGIC_N
@@ -69,6 +76,8 @@ export class Swellray {
             cardinals: [],
             directions: []
         }
+        this.mode = ['preset', 'sculpt'];
+        this.selectedMode = this.mode[1];
         this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.fps = 60
@@ -98,18 +107,23 @@ export class Swellray {
         this.raycaster = new THREE.Raycaster()
         this.intersectionPlane = new Plane(new THREE.Vector3(0, 1, 0), 0);
         this.mouse = new THREE.Vector2()
+        this.isMouseDown = false;
         this.initCompass();
         this.initControls();
+        this.controls.enabled=false
         this.buildSea();
         this.buildLegends();
+        this.setSculptor();
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
-        window.addEventListener('click', this.onPointerMove.bind(this))
+        window.addEventListener("mousedown", () => this.isMouseDown = true, false);
+        window.addEventListener("mouseup", () => this.isMouseDown = false, false);
         this.update();
         this.onWindowResize();
 
 
     }
+
     buildSea() {
         const positions = new Float32Array(this.CENTERS_NUMBER * 3);
         const scales = new Float32Array(this.CENTERS_NUMBER);
@@ -182,7 +196,7 @@ export class Swellray {
 
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
-        this.scene.add(this.seaPlane);
+        // this.scene.add(this.seaPlane);
 
 
 
@@ -192,12 +206,13 @@ export class Swellray {
 
         this.dots = new THREE.Points(d_geometry, this.seaMaterial);
         this.dots.rotateX(Math.PI)
+        // this.dots.rotateY(Math.PI/2 )
         this.scene.add(this.dots);
         this.seaCenters = this.dots.geometry.attributes.position.clone()
 
     }
     buildLegends() {
-  
+
         //**HEIHGTMARK */
         this.upperRuler = new THREE.Group()
         const m1 = new THREE.LineBasicMaterial({
@@ -278,7 +293,7 @@ export class Swellray {
 
         eachCut = 0
         while (unitcounter < cells) {
-             if (eachCut == 8) {
+            if (eachCut == 8) {
                 eachCut = 0
                 const span = document.createElement("span")
                 span.innerHTML = `${unitcounter}m`
@@ -292,8 +307,8 @@ export class Swellray {
 
             }
             const pointGroup4 = [];
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 -4));
-            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX)/2 + unitcounter ,0, -(this.seaSpreadScale * this.AMOUNTX)/2 - (eachCut == 0 ? 12 : 8)));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX) / 2 + unitcounter, 0, -(this.seaSpreadScale * this.AMOUNTX) / 2 - 4));
+            pointGroup4.push(new THREE.Vector3(-(this.seaSpreadScale * this.AMOUNTX) / 2 + unitcounter, 0, -(this.seaSpreadScale * this.AMOUNTX) / 2 - (eachCut == 0 ? 12 : 8)));
             const g4 = new THREE.BufferGeometry().setFromPoints(pointGroup4);
             this.extensionMeasure.add(new THREE.Line(g4, m1));
             unitcounter++;
@@ -321,7 +336,7 @@ export class Swellray {
         this.controls.enablePan = true;
         this.controls.dampingFactor = 0.05;
         this.controls.screenSpacePanning = false;
-        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale / 20;
+        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
         this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 8), this.controls.maxDistance / (this.camera.aspect * 4), -this.controls.maxDistance / (this.camera.aspect * 2));
@@ -330,6 +345,15 @@ export class Swellray {
     }
     resetWaves() {
         this.waves = []
+    }
+    setMode(mode: string) {
+        if (this.mode.indexOf(mode) !== -1) {
+            this.selectedMode = mode
+        }
+    }
+    setSculptor() {
+        this.setBathymetry(null);
+        this.sculptor = new Sculptor(this.seaDepthScale,( (this.AMOUNTX-1)*this.seaSpreadScale) /4, .001, (this.AMOUNTX-1), this.seaSpreadScale)
     }
     setWaveHeight(waveIndex: number, value: number) {
         this.waves[waveIndex].height = (value == (null || 0) || this.waves[waveIndex].period == (null || 0)) ? 0 : value
@@ -371,45 +395,63 @@ export class Swellray {
         }
         //TODO Calc max Height
     }
+    createEmptyBathymetry(size: number): THREE.DataTexture {
+        const data: Float32Array = new Float32Array(size * size * 4);
+        for (let i = 0; i < size * size * 4; i += 4) {
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+            data[i + 3] = 1;
+        }
+        return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
+    }
     async setBathymetry(bathymetryMapImage: string) {
-        // while(this.floorPlane !== undefined && this.floorPlane !== null ){
+
         this.scene.remove(this.floorPlane);
-        this.loadBathymetry(bathymetryMapImage);
+        if (this.selectedMode == 'preset') {
+            this.loadBathymetry(bathymetryMapImage);
+        } else if (this.selectedMode == 'sculpt') {
+            const img = this.createEmptyBathymetry(this.AMOUNTX);
+            this.buildFloor(img)
+        }
     }
     async loadBathymetry(bathymetryMapImage: string) {
         const loader1 = new THREE.TextureLoader();
         // load a image resource
         await loader1.loadAsync(bathymetryMapImage).then(image => {
-            this.bathymetryMap = image
-            this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
-            const seaFloor_geometry =  new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
-
-            const seaFloor_material = new THREE.ShaderMaterial({
-                uniforms: {
-                    uScale: {
-                        value: this.seaSpreadScale
-                    },
-                    uDepthScale: {
-                        value: this.seaDepthScale
-                    },
-                    uDepthmap: {
-                        value: this.bathymetryMap
-                    },
-                    uFloorAugment: {
-                        value: this.seaFloorVisAugment
-                    }
-                },
-                vertexShader: floorVertex,
-                fragmentShader: floorFragment
-            });
-
-            this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
-            this.floorPlane.rotateX(-Math.PI / 2)
-            this.floorPlane.rotateZ(Math.PI / 2)
-            this.floorPlane.position.setY(this.floorPosition)
-            this.scene.add(this.floorPlane)
+           this.buildFloor(image)
         })
 
+    }
+    buildFloor(img: Texture){
+        this.bathymetryMap = img
+        this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
+         const seaFloor_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
+        //const seaFloor_geometry = new THREE.PlaneGeometry(256, 256, 256, 256);
+
+        const seaFloor_material = new THREE.ShaderMaterial({
+            uniforms: {
+                uScale: {
+                    value: this.seaSpreadScale
+                },
+                uDepthScale: {
+                    value: this.seaDepthScale
+                },
+                uDepthmap: {
+                    value: this.bathymetryMap
+                },
+                uFloorAugment: {
+                    value: this.seaFloorVisAugment
+                }
+            },
+            vertexShader: floorVertex,
+            fragmentShader: floorFragment
+        });
+
+        this.floorPlane = new THREE.Mesh(seaFloor_geometry, seaFloor_material);
+        this.floorPlane.rotateX(-Math.PI / 2)
+        this.floorPlane.position.setY(this.floorPosition)
+        this.scene.add(this.floorPlane)
     }
     async loadChop(chopMapImage: string) {
         const loader2 = new THREE.TextureLoader();
@@ -420,7 +462,34 @@ export class Swellray {
         })
     }
     onPointerMove(e) {
-        this.moveRulerToPointer(e)
+        const rect = this.container.getBoundingClientRect();
+        this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
+        this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
+        this.moveRulerToPointer()
+
+
+        
+        
+        if (this.selectedMode == 'sculpt') {
+            if (!this.isMouseDown) return;
+
+            // Crear un rayo desde la posición de la cámara a la posición del mouse en el espacio de la cámara
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(this.mouse, this.camera);
+
+            // Obtener la intersección del rayo con el plano
+            const intersects = raycaster.intersectObjects([this.floorPlane]);
+           
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+
+                // Convertir la posición del mouse al espacio del mundo
+                const mousePosition = intersect.point.clone().sub(this.floorPlane.position);
+                
+                
+                this.sculptor.sculpt(this.bathymetryMap,intersect,this.floorPlane);
+            }
+        }
     }
     onWindowResize() {
 
@@ -435,10 +504,8 @@ export class Swellray {
         coord.x = (coord.x * widthHalf) + widthHalf;
         coord.y = - (coord.y * heightHalf) + heightHalf;
     };
-    moveRulerToPointer(e) {
-        const rect = this.container.getBoundingClientRect();
-        this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
-        this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
+    moveRulerToPointer() {
+        
         const intersection = new THREE.Vector3()
         this.raycaster.setFromCamera(this.mouse, this.camera)
         this.raycaster.ray.intersectPlane(this.intersectionPlane, intersection)
@@ -446,7 +513,7 @@ export class Swellray {
         this.upperRuler.position.set(intersection.x, intersection.y, intersection.z)
         this.lowerRuler.position.set(intersection.x, intersection.y, intersection.z)
     };
-    moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean, canOut : boolean) {
+    moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean, canOut: boolean) {
         const centerToCamera = this.camera.position.distanceTo(new Vector3())
         const cardinalToCamera = this.camera.position.distanceTo(coords)
         this.toScreenPosition(coords);
@@ -490,13 +557,15 @@ export class Swellray {
 
         }
         element.style.transform = 'translate3d(' + coords.x + 'px,' + coords.y + 'px, 0)'
-        element.style.visibility = outside  ? 'hidden' : 'visible'
+        element.style.visibility = outside ? 'hidden' : 'visible'
 
 
     }
 
     updateControls() {
+
         this.controls.update();
+
     }
     updateCompass() {
         let r = 0 + this.spotOrientation
@@ -514,18 +583,19 @@ export class Swellray {
     }
     updatePointer() {
         this.upperRulerElements.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 *(this.upperRulerElements.length - index)), this.pointer.z), false, false,true)
+            this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 * (this.upperRulerElements.length - index)), this.pointer.z), false, false, true)
         });
-         this.lowerRulerElements.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3(this.pointer.x, this.floorPosition - ((this.lowerRulerElements.length - index) * this.seaFloorVisAugment), this.pointer.z), false, false,true)
-         });
+        this.lowerRulerElements.forEach((line: HTMLElement, index: Number) => {
+            this.moveTag(line, new THREE.Vector3(this.pointer.x, this.floorPosition - ((this.lowerRulerElements.length - index) * this.seaFloorVisAugment), this.pointer.z), false, false, true)
+        });
     }
-    updateFloorMeasure(){
+    updateFloorMeasure() {
         this.floorElements.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX)/2 - 8*(this.floorElements.length - index),0, -(this.seaSpreadScale * this.AMOUNTX)/2 - 15), false, false,true)
+            this.moveTag(line, new THREE.Vector3((this.seaSpreadScale * this.AMOUNTX) / 2 - 8 * (this.floorElements.length - index), 0, -(this.seaSpreadScale * this.AMOUNTX) / 2 - 15), false, false, true)
         });
     }
     update() {
+
         this.updateControls()
         this.updateCompass()
         this.updateFloorMeasure()
@@ -543,6 +613,7 @@ export class Swellray {
             this.render();
             this.delta %= (1 / this.fps)
         }
+        this.bathymetryMap.needsUpdate = true
     }
     destroy() {
         this.renderer.forceContextLoss()
