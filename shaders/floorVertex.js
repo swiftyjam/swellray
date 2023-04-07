@@ -12,8 +12,8 @@ const floorVertex = `
         vUv = uv;
         vec3 newPosition = position;
         vec3 p=vec3(position.xyz);
-        vDepth=(1.-(texture2D(uDepthmap, vec2(vUv.x, 1.0 - vUv.y)).x));
-        p.z = p.z - vDepth * uDepthScale * uFloorAugment;
+        // vDepth=((texture2D(uDepthmap, vec2(vUv.x, 1.0 - vUv.y)).x));
+        // p.y *=  uFloorAugment;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
     }
     `

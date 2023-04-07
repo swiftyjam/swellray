@@ -3,9 +3,9 @@
     "props": {
         "colors": {
             "seaFloorColor": "2d445c",
-            "lowSeaColor": "0032a8",
+            "lowSeaColor": "2260e8",
             "highSeaColor": "1E58A7",
-            "backgroundColor": "ffffff"
+            "backgroundColor": "0c0d18"
         }
     }
 }
