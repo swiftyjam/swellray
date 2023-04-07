@@ -65,7 +65,7 @@ export class Swellray {
     sculptor: Sculptor
 
     mode: Array<string>
-    selectedMode: string
+    sculptMode: string
     isMouseDown: boolean
 
     readonly MAGIC_N: number = 256
@@ -88,7 +88,7 @@ export class Swellray {
             directions: []
         }
         this.mode = ['preset', 'sculpt'];
-        this.selectedMode = this.mode[1];
+        this.sculptMode = false;
         this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.fps = 60
@@ -125,16 +125,16 @@ export class Swellray {
         this.lastSculptTime = 0;
         this.sculptInterval = 16; // Limitar a llamar la función sculpt cada 16 ms (aproximadamente 60 FPS)
         this.intersectionPlane = new Plane(new THREE.Vector3(0, 1, 0), 0);
-        this.sculptPointer = this.createSculptPointer(this.theme.props.colors.sculptPointerColor);
         this.createSculptAreaPointer();
-        this.scene.add(this.sculptPointer)
+        this.createSculptPointer()
         this.mouse = new THREE.Vector2()
         this.isMouseDown = false;
         this.initCompass();
         this.initControls();
-        this.controls.enabled = false
+        
         this.buildSea();
         this.buildLegends();
+        this.setBrush(0,0,0,0)
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
         window.addEventListener("mousedown", () => this.isMouseDown = true, false);
@@ -356,9 +356,10 @@ export class Swellray {
         this.controls.listenToKeyEvents(window); // optional
         this.controls.enableDamping = true;
         this.controls.enablePan = true;
+        this.controls.enableZoom = true;
         this.controls.dampingFactor = 0.05;
         this.controls.screenSpacePanning = false;
-        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 2;
+        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 1;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
         this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 8), this.controls.maxDistance / (this.camera.aspect * 4), -this.controls.maxDistance / (this.camera.aspect * 2));
@@ -368,27 +369,46 @@ export class Swellray {
     resetWaves() {
         this.waves = []
     }
-    setMode(mode: string) {
-        if (this.mode.indexOf(mode) !== -1) {
-            this.selectedMode = mode
-        }
+    toggleSculptMode(value){
+        this.sculptMode = value
+        this.sculptAreaPointer.visible = value
+        this.controls.enabled = !value
+    }
+   
+    
+    setBrush(brushSizeX,brushSizeY,brushAttenuation,brushRotation,brushPower){
+        this.sculptDiameterA = brushSizeX; 
+        this.sculptDiameterB = brushSizeY; 
+        this.sculptAttenuationFactor = brushAttenuation;
+        this.sculptAngle = brushRotation;
+        this.sculptPower = brushPower;
+        this.createSculptAreaPointer();
+        
     }
     updateSculptPointer(intersect: any) {
+        
         this.sculptPointer.position.copy(intersect.point);
         this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment);
-        this.sculptAreaPointer.position.copy(this.sculptPointer.position)
         this.sculptPointer.visible = true;
+        if(this.sculptAreaPointer !== "undefined")
+        this.sculptAreaPointer.position.copy(this.sculptPointer.position)
+        
     }
 
-    createSculptPointer(color) {
+    createSculptPointer() {
         const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-        const material = new THREE.MeshBasicMaterial({ color, wireframe: false });
+        const material = new THREE.MeshBasicMaterial({ color: this.theme.props.colors.sculptPointerColor, wireframe: false });
         const sphere = new THREE.Mesh(geometry, material);
         sphere.visible = false; // Ocultar inicialmente el cilindro
         sphere.position.setY(this.floorPosition);
-        return sphere;
+        this.sculptPointer = sphere;
+        console.log(this.sculptPointer);
+        
     }
     createSculptAreaPointer() {
+        if(this.sculptAreaPointer !== "undefined"){
+            this.scene.remove(this.sculptAreaPointer);
+        }
         const a = this.sculptDiameterA / 2;
         const b = this.sculptDiameterB / 2;
         const angle = this.sculptAngle * Math.PI / 180 // Puedes ajustar este valor para controlar la relación de aspecto de la elipse
@@ -423,7 +443,7 @@ export class Swellray {
         this.bathymetryMap.image.data[index + 3] = 1;
         // Indicates that the texture needs to be updated
         this.bathymetryMap.needsUpdate = true;
-        // console.log(data[0]);
+
 
     }
     getElipseAttenuation(distance: number, di: number, dj: number): number {
@@ -539,14 +559,9 @@ export class Swellray {
         return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
     }
     async setBathymetry(bathymetryMapImage: string) {
-
         this.scene.remove(this.floorPlane);
-        if (this.selectedMode == 'preset') {
-            this.loadBathymetry(bathymetryMapImage);
-        } else if (this.selectedMode == 'sculpt') {
-            const img = this.createEmptyBathymetry(this.AMOUNTX);
-            this.buildFloor(img)
-        }
+        const img = this.createEmptyBathymetry(this.AMOUNTX);
+        this.buildFloor(img)
     }
     async loadBathymetry(bathymetryMapImage: string) {
         const loader1 = new THREE.TextureLoader();
@@ -599,7 +614,7 @@ export class Swellray {
         this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
         this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
 
-        if (this.selectedMode == 'sculpt') {
+        if (this.sculptMode) {
 
             // Usar la instancia de raycaster existente en lugar de crear una nueva
             this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -619,8 +634,6 @@ export class Swellray {
                     this.lastSculptTime = currentTime;
                 }
 
-            } else {
-                this.sculptPointer.visible = false
             }
         }
     }
