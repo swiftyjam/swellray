@@ -20,7 +20,8 @@ export class Swellray {
     intersectionPlane: Plane
     lastSculptTime: number
     sculptInterval: number
-    sculptPointer : Mesh
+    sculptPointer: Mesh
+    sculptAreaPointer: THREE.Line
     pointer: Vector3
     upperRuler: Group
     lowerRuler: Group
@@ -29,15 +30,18 @@ export class Swellray {
     controls: OrbitControls
     dots: Points
     seaPlane: Mesh
-    floorGeometry : THREE.PlaneGeometry
+    floorGeometry: THREE.PlaneGeometry
     floorPlane: Mesh
     theme: any
     backgroundColor: string
     delta: number
     fps: number
     waves: Array<TorochoidalWave>
-    sculptRadius: number
+    sculptDiameterA: number
+    sculptDiameterB: number
+    sculptAngle: number
     sculptPower: number
+    sculptAttenuationFactor: number
     maxSculptHeight: number
     bathymetryMap: Texture
     chopMap: Texture
@@ -112,19 +116,23 @@ export class Swellray {
         this.camera.position.set(400, 200, 0);
         this.pointer = new Vector3()
         this.raycaster = new THREE.Raycaster()
-        this.sculptRadius= 50
-        this.sculptPower= .1
-        this.maxSculptHeight= this.seaDepthScale
+        this.sculptDiameterA = 50
+        this.sculptDiameterB = 35
+        this.sculptAngle = 45
+        this.sculptPower = 2
+        this.sculptAttenuationFactor = 6
+        this.maxSculptHeight = this.seaDepthScale
         this.lastSculptTime = 0;
         this.sculptInterval = 16; // Limitar a llamar la función sculpt cada 16 ms (aproximadamente 60 FPS)
         this.intersectionPlane = new Plane(new THREE.Vector3(0, 1, 0), 0);
-        this.sculptPointer = this.createSculptPointer(( (this.AMOUNTX-1)*this.seaSpreadScale) /2, 0xff0000);
+        this.sculptPointer = this.createSculptPointer(this.theme.props.colors.sculptPointerColor);
+        this.createSculptAreaPointer();
         this.scene.add(this.sculptPointer)
         this.mouse = new THREE.Vector2()
         this.isMouseDown = false;
         this.initCompass();
         this.initControls();
-        this.controls.enabled=false
+        this.controls.enabled = false
         this.buildSea();
         this.buildLegends();
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -366,35 +374,78 @@ export class Swellray {
         }
     }
     updateSculptPointer(intersect: any) {
-         this.sculptPointer.position.copy(intersect.point);
-         this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment );
+        this.sculptPointer.position.copy(intersect.point);
+        this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment);
+        this.sculptAreaPointer.position.copy(this.sculptPointer.position)
         this.sculptPointer.visible = true;
     }
-    
-    createSculptPointer(diameter, color) {
+
+    createSculptPointer(color) {
         const geometry = new THREE.SphereGeometry(0.5, 16, 16);
         const material = new THREE.MeshBasicMaterial({ color, wireframe: false });
         const sphere = new THREE.Mesh(geometry, material);
         sphere.visible = false; // Ocultar inicialmente el cilindro
-        sphere.position.setY(this.floorPosition) ;
+        sphere.position.setY(this.floorPosition);
         return sphere;
     }
-    updateDisplacementTexture( i: number, j: number, height: number): void {
-        const size =  this.bathymetryMap.image.width;
+    createSculptAreaPointer() {
+        const a = this.sculptDiameterA / 2;
+        const b = this.sculptDiameterB / 2;
+        const angle = this.sculptAngle * Math.PI / 180 // Puedes ajustar este valor para controlar la relación de aspecto de la elipse
+        const ellipseCurve = new THREE.EllipseCurve(
+            0,
+            0,
+            a,
+            b,
+            0,
+            2 * Math.PI,
+            false,
+            0
+        );
+
+        const ellipsePoints = ellipseCurve.getPoints(50);
+        const ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+
+        const ellipseMaterial = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptPointerColor });
+        this.sculptAreaPointer = new THREE.Line(ellipseGeometry, ellipseMaterial);
+        this.sculptAreaPointer.rotateX(Math.PI / 2)
+        this.sculptAreaPointer.rotateZ(-angle)
+        this.scene.add(this.sculptAreaPointer);
+    }
+    updateDisplacementTexture(i: number, j: number, height: number): void {
+        const size = this.bathymetryMap.image.width;
         const index = (j * size + i) * 4;
-       
+
         const normalizedHeight = height / this.maxSculptHeight;
-        this.bathymetryMap.image.data[index] =  normalizedHeight;
+        this.bathymetryMap.image.data[index] = normalizedHeight;
         this.bathymetryMap.image.data[index + 1] = normalizedHeight;
         this.bathymetryMap.image.data[index + 2] = normalizedHeight;
-        this.bathymetryMap.image.data[index + 3] = 1 ;
+        this.bathymetryMap.image.data[index + 3] = 1;
         // Indicates that the texture needs to be updated
         this.bathymetryMap.needsUpdate = true;
         // console.log(data[0]);
-        
-    }
 
-    sculpt( intersect: THREE.Intersection): void {
+    }
+    getElipseAttenuation(distance: number, di: number, dj: number): number {
+        const ellipseRotation = this.sculptAngle * (Math.PI / 180); // Convierte a radianes
+        const a = this.sculptDiameterA;
+        const b = this.sculptDiameterB;
+
+        // Aplica la rotación
+        const cosTheta = Math.cos(ellipseRotation);
+        const sinTheta = Math.sin(ellipseRotation);
+        const rotatedDi = di * cosTheta - dj * sinTheta;
+        const rotatedDj = di * sinTheta + dj * cosTheta;
+
+        const ellipseDistance = Math.sqrt((rotatedDi * rotatedDi) / (a * a) + (rotatedDj * rotatedDj) / (b * b));
+
+        if (ellipseDistance <= 1) {
+            return Math.pow(1 - ellipseDistance, this.sculptAttenuationFactor); // Retorna una atenuación gradual desde el centro hacia los extremos con el grado de atenuación ajustado
+        }
+
+        return 0;
+    }
+    sculpt(intersect: THREE.Intersection): void {
         const size = this.floorGeometry.parameters.widthSegments;
         const vertices = this.floorGeometry.attributes.position.array;
 
@@ -404,8 +455,8 @@ export class Swellray {
         const i = Math.floor((localPos.x + 0.5 * this.floorGeometry.parameters.width) / this.floorGeometry.parameters.width * size);
         const j = Math.floor((localPos.z + 0.5 * this.floorGeometry.parameters.height) / this.floorGeometry.parameters.height * size);
 
-        for (let dj = -Math.ceil(this.sculptRadius); dj <= Math.ceil(this.sculptRadius); dj++) {
-            for (let di = -Math.ceil(this.sculptRadius); di <= Math.ceil(this.sculptRadius); di++) {
+        for (let dj = -Math.ceil(this.sculptDiameterB); dj <= Math.ceil(this.sculptDiameterB); dj++) {
+            for (let di = -Math.ceil(this.sculptDiameterA); di <= Math.ceil(this.sculptDiameterA); di++) {
                 const ni = i + di;
                 const nj = j + dj;
 
@@ -420,15 +471,15 @@ export class Swellray {
                     const dy = localPos.z - localZ;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < this.sculptRadius) {
-                        const deltaHeight = (1.0 - distance / this.sculptRadius) * this.sculptPower ;
-                        const currentHeight = this.bathymetryMap.image.data[indexDisplacement] * this.maxSculptHeight;
-                        const newHeight = Math.min(vertices[index + 1] + deltaHeight, this.maxSculptHeight);
+                    if (distance < Math.max(this.sculptDiameterA, this.sculptDiameterB)) {
+                        const attenuation = this.getElipseAttenuation(distance, di, dj);
+                        const deltaHeight = attenuation * this.sculptPower;
+                        const newHeight = vertices[index + 1] + deltaHeight;
 
-                        // if (newHeight < this.maxSculptHeight) {
-                        vertices[index + 1] += deltaHeight;
-                            this.updateDisplacementTexture( ni, nj, vertices[index + 1]);
-                        // }
+                        if (newHeight <= this.maxSculptHeight * 2) {
+                            vertices[index + 1] = newHeight;
+                            this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
+                        }
                     }
                 }
             }
@@ -501,11 +552,11 @@ export class Swellray {
         const loader1 = new THREE.TextureLoader();
         // load a image resource
         await loader1.loadAsync(bathymetryMapImage).then(image => {
-           this.buildFloor(image)
+            this.buildFloor(image)
         })
 
     }
-    buildFloor(img: Texture){
+    buildFloor(img: Texture) {
         this.bathymetryMap = img
         this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -547,18 +598,18 @@ export class Swellray {
         const rect = this.container.getBoundingClientRect();
         this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
         this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
-   
+
         if (this.selectedMode == 'sculpt') {
-            
+
             // Usar la instancia de raycaster existente en lugar de crear una nueva
             this.raycaster.setFromCamera(this.mouse, this.camera);
             const intersects = this.raycaster.intersectObjects([this.floorPlane]);
-            
+
             if (intersects.length > 0) {
                 const intersect = intersects[0];
                 this.updateSculptPointer(intersect);
-                
-                
+
+
                 if (!this.isMouseDown) return;
                 // Limitar la frecuencia de llamadas a la función sculpt
                 const currentTime = performance.now();
@@ -567,7 +618,7 @@ export class Swellray {
                     this.sculpt(intersect);
                     this.lastSculptTime = currentTime;
                 }
-                
+
             } else {
                 this.sculptPointer.visible = false
             }
@@ -586,15 +637,15 @@ export class Swellray {
         coord.x = (coord.x * widthHalf) + widthHalf;
         coord.y = - (coord.y * heightHalf) + heightHalf;
     };
-    
+
     moveRulerToPointer() {
-        
-         const intersection = new THREE.Vector3()
-         this.raycaster.setFromCamera(this.mouse, this.camera)
-         this.raycaster.ray.intersectPlane(this.intersectionPlane, intersection)
-         this.pointer.set(intersection.x, intersection.y, intersection.z)
-         this.upperRuler.position.set(intersection.x, intersection.y, intersection.z)
-         this.lowerRuler.position.set(intersection.x, intersection.y, intersection.z)
+
+        const intersection = new THREE.Vector3()
+        this.raycaster.setFromCamera(this.mouse, this.camera)
+        this.raycaster.ray.intersectPlane(this.intersectionPlane, intersection)
+        this.pointer.set(intersection.x, intersection.y, intersection.z)
+        this.upperRuler.position.set(intersection.x, intersection.y, intersection.z)
+        this.lowerRuler.position.set(intersection.x, intersection.y, intersection.z)
     };
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean, canOut: boolean) {
         const centerToCamera = this.camera.position.distanceTo(new Vector3())
@@ -699,7 +750,7 @@ export class Swellray {
             this.delta %= (1 / this.fps)
         }
 
-       
+
     }
     destroy() {
         this.renderer.forceContextLoss()
@@ -709,7 +760,7 @@ export class Swellray {
     }
     exportDisplacementMap(): void {
         const size: number = this.bathymetryMap.image.width;
-        const data: Uint8Array = new Uint8Array( this.bathymetryMap.image.data.buffer);
+        const data: Uint8Array = new Uint8Array(this.bathymetryMap.image.data.buffer);
         const canvas: HTMLCanvasElement = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;

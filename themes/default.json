@@ -5,7 +5,8 @@
             "seaFloorColor": "2d445c",
             "lowSeaColor": "2260e8",
             "highSeaColor": "1E58A7",
-            "backgroundColor": "0c0d18"
+            "backgroundColor": "0c0d18",
+            "sculptPointerColor": "ffffff"
         }
     }
 }
