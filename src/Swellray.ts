@@ -131,10 +131,11 @@ export class Swellray {
         this.isMouseDown = false;
         this.initCompass();
         this.initControls();
-        
+
         this.buildSea();
         this.buildLegends();
-        this.setBrush(0,0,0,0)
+        this.setBrush(0,0,0,0);
+        
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
         window.addEventListener("mousedown", () => this.isMouseDown = true, false);
