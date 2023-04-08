@@ -217,8 +217,8 @@ export class Swellray {
 
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
-        // this.scene.add(this.seaPlane);
-
+        this.scene.add(this.seaPlane);
+        this.seaPlane.visible=false;
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -389,7 +389,10 @@ export class Swellray {
         
         this.sculptPointer.position.copy(intersect.point);
         this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment);
-        this.sculptPointer.visible = true;
+        
+    }
+    updateSculptAreaPointer(intersect: any) {
+        
         if(this.sculptAreaPointer !== "undefined")
         this.sculptAreaPointer.position.copy(this.sculptPointer.position)
         
@@ -399,10 +402,10 @@ export class Swellray {
         const geometry = new THREE.SphereGeometry(0.5, 16, 16);
         const material = new THREE.MeshBasicMaterial({ color: this.theme.props.colors.sculptPointerColor, wireframe: false });
         const sphere = new THREE.Mesh(geometry, material);
-        sphere.visible = false; // Ocultar inicialmente el cilindro
+ // Ocultar inicialmente el cilindro
         sphere.position.setY(this.floorPosition);
         this.sculptPointer = sphere;
-        console.log(this.sculptPointer);
+        this.scene.add(this.sculptPointer)
         
     }
     createSculptAreaPointer() {
@@ -614,7 +617,7 @@ export class Swellray {
         this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
         this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
 
-        if (this.sculptMode) {
+        
 
             // Usar la instancia de raycaster existente en lugar de crear una nueva
             this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -623,9 +626,10 @@ export class Swellray {
             if (intersects.length > 0) {
                 const intersect = intersects[0];
                 this.updateSculptPointer(intersect);
-
-
-                if (!this.isMouseDown) return;
+                
+                if (this.sculptMode) {
+                    this.updateSculptAreaPointer(intersect)
+                    if (!this.isMouseDown) return;
                 // Limitar la frecuencia de llamadas a la función sculpt
                 const currentTime = performance.now();
                 if (currentTime - this.lastSculptTime >= this.sculptInterval) {
