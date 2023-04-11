@@ -22,10 +22,6 @@ const vertex = `
     varying float vHeightDepthRatio;
     varying float vDisplacementY;
 
-    float rand(in vec2 co){
-        return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-    }
-
     vec3 gerstnerWave(vec4 wave,vec3 p,inout float windDisplace,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
        
@@ -48,7 +44,7 @@ const vertex = `
             calculatedSpeed =sqrt(G*vDepth);
             calculatedWavelength = sqrt(G*vDepth*period);
         }
-      
+    
         float steepness = height / calculatedWavelength;
         float windSteepness = windDisplace  ;
         steepness += windSteepness;

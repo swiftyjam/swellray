@@ -24,7 +24,11 @@ export class Swellray {
     sculptAreaPointer: THREE.Line
     pointer: Vector3
     upperRuler: Group
-    lowerRuler: Group
+    axisMarkerZ: THREE.Line
+    axisMarkerX: THREE.Line
+    axisMarkerZTag:HTMLElement
+    axisMarkerXTag:HTMLElement
+    floorDepthTag:HTMLElement
     extensionMeasure: Group
     clock: Clock
     controls: OrbitControls
@@ -44,6 +48,8 @@ export class Swellray {
     sculptAttenuationFactor: number
     maxSculptHeight: number
     bathymetryMap: Texture
+    energyMap: Texture
+    seaMap : Texture
     chopMap: Texture
     seaMaterial: ShaderMaterial
     seaCenters: BufferAttribute
@@ -275,37 +281,7 @@ export class Swellray {
             unitcounter++;
         }
         this.scene.add(this.upperRuler)
-        //LOWER
-        this.lowerRuler = new THREE.Group()
-        units = 12
-        unitcounter = 0
-        eachCut = 0
-        this.lowerRulerHTML = [];
-        while (unitcounter < units) {
-            if (eachCut == 1) {
-                eachCut = 0
-                const span = document.createElement("span")
-                span.innerHTML = `- ${unitcounter}m`
-                span.className = "rulerComponent"
-                span.classList.add("lower")
-                span.id = `lowerRuler-${unitcounter}`
-                span.style.position = "absolute"
-                this.container.appendChild(span)
-                this.lowerRulerHTML.unshift(
-                    document.getElementById(`lowerRuler-${unitcounter}`),
-                )
-            }
-
-
-            const pointGroup2 = [];
-            pointGroup2.push(new THREE.Vector3(0, this.floorPosition - (unitcounter * this.seaFloorVisAugment), 0));
-            pointGroup2.push(new THREE.Vector3(0, this.floorPosition - (unitcounter * this.seaFloorVisAugment), (eachCut == 0 ? 8 : 3)));
-            const g2 = new THREE.BufferGeometry().setFromPoints(pointGroup2);
-            this.lowerRuler.add(new THREE.Line(g2, m1));
-            eachCut++
-            unitcounter++;
-        }
-        this.scene.add(this.lowerRuler)
+  
         //**END HEIGHTMARK */
 
         //**FLOOR MEASSURE */
@@ -339,6 +315,44 @@ export class Swellray {
         }
         this.scene.add(this.extensionMeasure)
 
+        //AXIS MARKER
+        const amz_mat = new THREE.LineBasicMaterial({ color: 0x00ee90 });
+        const amz_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(-(this.AMOUNTX * this.seaSpreadScale)/2,1,0),new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,1,0)]);
+
+        this.axisMarkerZ = new THREE.Line(amz_geo,amz_mat)
+        this.scene.add(this.axisMarkerZ)
+
+        const amx_mat = new THREE.LineBasicMaterial({ color: 0xee0090 });
+        const amx_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(0,1,-(this.AMOUNTX * this.seaSpreadScale)/2),new Vector3(0,1,(this.AMOUNTX * this.seaSpreadScale)/2)]);
+
+        this.axisMarkerX = new THREE.Line(amx_geo,amx_mat)
+        this.scene.add(this.axisMarkerX)
+
+        const span_amx = document.createElement("span")
+        span_amx.innerHTML = `${this.axisMarkerX.position.z}m`
+        span_amx.className = "axisMarker"
+        span_amx.id = `amx`
+        span_amx.style.position = "absolute"
+        this.axisMarkerXTag = span_amx
+        this.container.appendChild(this.axisMarkerXTag)
+
+        const span_amz = document.createElement("span")
+        span_amz.innerHTML = `${this.axisMarkerZ.position.x}m`
+        span_amz.className = "axisMarker"
+        span_amz.id = `amz`
+        span_amz.style.position = "absolute"
+        this.axisMarkerZTag = span_amz
+        this.container.appendChild(this.axisMarkerZTag)
+
+        //FLOOR HEIGHT
+        const span_sh = document.createElement("span")
+        span_sh.innerHTML = `${0}m`
+        span_sh.className = "floorDepthMarker"
+        span_sh.id = `fd`
+        span_sh.style.position = "absolute"
+        this.floorDepthTag = span_sh
+        this.container.appendChild(this.floorDepthTag)
+        
     }
     initCompass() {
         const c = document.getElementsByClassName('compassComponent')
@@ -360,7 +374,7 @@ export class Swellray {
         this.controls.enableZoom = true;
         this.controls.dampingFactor = 0.05;
         this.controls.screenSpacePanning = false;
-        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 1;
+        this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 0.25;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
         this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 8), this.controls.maxDistance / (this.camera.aspect * 4), -this.controls.maxDistance / (this.camera.aspect * 2));
@@ -390,6 +404,9 @@ export class Swellray {
         
         this.sculptPointer.position.copy(intersect.point);
         this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment);
+        
+        this.moveTag(this.floorDepthTag,new Vector3().copy(intersect.point).setY(intersect.point.y + this.seaDepthScale * 2),false,false,true)
+        this.floorDepthTag.innerText = `Depth: ${(intersect.point.y).toPrecision(3)}m`
         
     }
     updateSculptAreaPointer(intersect: any) {
@@ -450,6 +467,35 @@ export class Swellray {
 
 
     }
+
+
+  logAlteredPosition(mesh) {
+  const width = 1;
+  const height = 1;
+
+  const renderer = new THREE.WebGLRenderer();
+  const renderTarget = new THREE.WebGLRenderTarget(width, height);
+
+  const scene = new THREE.Scene();
+  scene.add(mesh);
+
+  const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1, 1000);
+  camera.position.set(0, 0, 2);
+  camera.lookAt(0, 0, 0);
+
+  renderer.setRenderTarget(renderTarget);
+  renderer.render(scene, camera);
+  renderer.setRenderTarget(null);
+
+  const buffer = new Float32Array(width * height * 4);
+  renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+
+  const x = buffer[0];
+  const y = buffer[1];
+  const z = buffer[2];
+
+  console.log(`Altered position at (0, 0, 0): (${x}, ${y}, ${z})`);
+}
     getElipseAttenuation(distance: number, di: number, dj: number): number {
         const ellipseRotation = this.sculptAngle * (Math.PI / 180); // Convierte a radianes
         const a = this.sculptDiameterA;
@@ -552,7 +598,7 @@ export class Swellray {
         }
         //TODO Calc max Height
     }
-    createEmptyBathymetry(size: number): THREE.DataTexture {
+    createEmptyMapLayer(size: number): THREE.DataTexture {
         const data: Float32Array = new Float32Array(size * size * 4);
         for (let i = 0; i < size * size * 4; i += 4) {
             data[i] = 0;
@@ -562,9 +608,10 @@ export class Swellray {
         }
         return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
     }
+   
     async setBathymetry(bathymetryMapImage: string) {
         this.scene.remove(this.floorPlane);
-        const img = this.createEmptyBathymetry(this.AMOUNTX);
+        const img = this.createEmptyMapLayer(this.AMOUNTX);
         this.buildFloor(img)
     }
     async loadBathymetry(bathymetryMapImage: string) {
@@ -663,7 +710,17 @@ export class Swellray {
         this.raycaster.ray.intersectPlane(this.intersectionPlane, intersection)
         this.pointer.set(intersection.x, intersection.y, intersection.z)
         this.upperRuler.position.set(intersection.x, intersection.y, intersection.z)
-        this.lowerRuler.position.set(intersection.x, intersection.y, intersection.z)
+
+        //Axis
+        this.axisMarkerZ.position.setZ(intersection.z)
+        this.axisMarkerX.position.setX(intersection.x)
+
+        this.moveTag(this.axisMarkerXTag,new Vector3(intersection.x, 0, (this.AMOUNTX * this.seaSpreadScale)/2),false,false,true)
+        this.axisMarkerXTag.innerText = `X: ${((this.AMOUNTX * this.seaSpreadScale)/2 - intersection.x).toPrecision(3)}m`
+
+        this.moveTag(this.axisMarkerZTag,new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,0,intersection.z),false,false,true)
+        this.axisMarkerZTag.innerText = `Z: ${((this.AMOUNTX * this.seaSpreadScale)/2 - intersection.z).toPrecision(3)}m`
+
     };
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean, canOut: boolean) {
         const centerToCamera = this.camera.position.distanceTo(new Vector3())
@@ -738,9 +795,6 @@ export class Swellray {
         this.upperRulerHTML.forEach((line: HTMLElement, index: Number) => {
             this.moveTag(line, new THREE.Vector3(this.pointer.x, (2 * (this.upperRulerHTML.length - index)), this.pointer.z), false, false, true)
         });
-        this.lowerRulerHTML.forEach((line: HTMLElement, index: Number) => {
-            this.moveTag(line, new THREE.Vector3(this.pointer.x, this.floorPosition - ((this.lowerRulerHTML.length - index) * this.seaFloorVisAugment), this.pointer.z), false, false, true)
-        });
     }
     updateFloorMeasure() {
         this.floorMeasureHTML.forEach((line: HTMLElement, index: Number) => {
@@ -764,6 +818,9 @@ export class Swellray {
                 this.seaMaterial.uniforms.uWaves.value = [0, 0, 0, 0]
             }
             this.floorPlane.geometry.attributes.position.needsUpdate = true;
+            this.dots.geometry.attributes.position.needsUpdate = true;
+            this.seaPlane.geometry.attributes.position.needsUpdate = true;
+
             this.render();
             this.delta %= (1 / this.fps)
         }
