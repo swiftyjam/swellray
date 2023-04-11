@@ -9,6 +9,8 @@ precision highp float;
     varying float vHeightDepthRatio;
     varying vec2 vWindDirection;
     uniform sampler2D uDepthmap;
+    uniform sampler2D uEnergymap;
+    varying float vEnergyAtt;
     uniform float uDepthScale;
     uniform vec3 u_low_color;
     uniform vec3 u_high_color;
@@ -23,7 +25,7 @@ precision highp float;
         vec4 breakColor = vec4(mix(u_low_color,vec3(.9,.9,1.),vHeightDepthRatio/4.),1.);
         
         vec4 color=vec4(mix(u_low_color,u_high_color,mix_strength),1.);
-
+    
         gl_FragColor=color;
 
         if(  vSteepness > 0.1428 && vHeightDepthRatio > .78){ 

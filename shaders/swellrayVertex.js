@@ -15,8 +15,10 @@ const vertex = `
     uniform float uScale;
     uniform float uDepthScale;
     uniform sampler2D uDepthmap;
+    uniform sampler2D uEnergymap;
     uniform sampler2D uNoiseMap;
     varying float vDepth;
+    varying float vEnergyAtt;
     varying vec2 vUv;
     varying float vSteepness;
     varying float vHeightDepthRatio;
@@ -27,8 +29,9 @@ const vertex = `
        
         
         vDepth=(1.-(texture2D(uDepthmap, vec2(1.- vUv.y,1.- vUv.x)).x)) * uDepthScale;
+        vEnergyAtt=((texture2D(uEnergymap, vec2(1.- vUv.y,1.- vUv.x)).x));
         float period= wave.z;
-        float height= wave.w  ;
+        float height= wave.w;
         float w = 2.*PI / period ; 
 
         float calculatedWavelength = G*pow(period,2.) / 2.*PI;
@@ -45,7 +48,7 @@ const vertex = `
             calculatedWavelength = sqrt(G*vDepth*period);
         }
     
-        float steepness = height / calculatedWavelength;
+        float steepness = (height / calculatedWavelength) * vEnergyAtt;
         float windSteepness = windDisplace  ;
         steepness += windSteepness;
         
@@ -56,8 +59,8 @@ const vertex = `
         vec2 d = normalize(vec2(wave.x,-wave.y) + (vWindDirection * windDisplace));
         float f = k*(dot(d,p.xz)-c*uTime);
         
+        // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
         float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
-       
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),
@@ -70,8 +73,9 @@ const vertex = `
         );
         
 
-        float vertical = min(a*cos(f), vDepth );
+        // float vertical = min(a*cos(f), vDepth );
         //float vertical = a*cos(f);
+        float vertical = min(a*cos(f), vDepth - 1. * uScale  );
         vertical = vertical - windDisplace;
         vSteepness += (-vertical) / calculatedWavelength ;
         return vec3(

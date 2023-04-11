@@ -211,6 +211,9 @@ export class Swellray {
                 uDepthmap: {
                     value: null
                 },
+                uEnergymap: {
+                    value: null
+                },
                 uNoiseMap: {
                     value: null
                 },
@@ -238,7 +241,7 @@ export class Swellray {
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
         this.scene.add(this.seaPlane);
-        this.seaPlane.visible=false;
+        this.seaPlane.visible=true;
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -287,7 +290,7 @@ export class Swellray {
 
             const pointGroup2 = [];
             pointGroup2.push(new THREE.Vector3(0, (unitcounter), 0));
-            pointGroup2.push(new THREE.Vector3(0, (unitcounter), (eachCut == 0 ? 8 : 3)));
+            pointGroup2.push(new THREE.Vector3(0, (unitcounter), (eachCut == 0 ? 2 : 1)));
             const g2 = new THREE.BufferGeometry().setFromPoints(pointGroup2);
             this.upperRuler.add(new THREE.Line(g2, m1));
             eachCut++
@@ -330,13 +333,13 @@ export class Swellray {
 
         //AXIS MARKER
         const amz_mat = new THREE.LineBasicMaterial({ color: 0x00ee90 });
-        const amz_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(-(this.AMOUNTX * this.seaSpreadScale)/2,1,0),new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,1,0)]);
+        const amz_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(-(this.AMOUNTX * this.seaSpreadScale)/2,0,0),new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,0,0)]);
 
         this.axisMarkerZ = new THREE.Line(amz_geo,amz_mat)
         this.scene.add(this.axisMarkerZ)
 
         const amx_mat = new THREE.LineBasicMaterial({ color: 0xee0090 });
-        const amx_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(0,1,-(this.AMOUNTX * this.seaSpreadScale)/2),new Vector3(0,1,(this.AMOUNTX * this.seaSpreadScale)/2)]);
+        const amx_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(0,0,-(this.AMOUNTX * this.seaSpreadScale)/2),new Vector3(0,0,(this.AMOUNTX * this.seaSpreadScale)/2)]);
 
         this.axisMarkerX = new THREE.Line(amx_geo,amx_mat)
         this.scene.add(this.axisMarkerX)
@@ -486,8 +489,8 @@ export class Swellray {
         const size = this.bathymetryMap.image.width;
         const radians = (this.swellDirection * Math.PI) / 180;
     
-        const dx = Math.round(Math.cos(radians));
-        const dy = Math.round(Math.sin(radians));
+        const dx = -Math.round(Math.cos(radians));
+        const dy = -Math.round(Math.sin(radians));
     
         // Crear una copia de los datos de la imagen de bathymetryMap
         const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
@@ -502,7 +505,8 @@ export class Swellray {
                     const index = (y * size + x) * 4;
                     const normalizedHeight = bathymetryData[index];
     
-                    energyReduction += normalizedHeight;
+                    // energyReduction += normalizedHeight;
+                    energyReduction += 0.01 * normalizedHeight;
                     energyReduction = Math.min(energyReduction, 1);
     
                     const energyIndex = (j * size + i) * 4;
@@ -518,6 +522,7 @@ export class Swellray {
         }
     
         this.energyMap.needsUpdate = true;
+        this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
     }
      saveTextureAsPNG(texture, fileName) {
         // Create a canvas to render the texture
@@ -707,7 +712,8 @@ export class Swellray {
     buildFloor(img: Texture) {
         this.bathymetryMap = img
         this.energyMap = this.createEmptyMapLayer(this.AMOUNTX);
-        this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
+        this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap;
+        this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
         this.floorGeometry.rotateX(-Math.PI / 2)
         //const seaFloor_geometry = new THREE.PlaneGeometry(256, 256, 256, 256);
