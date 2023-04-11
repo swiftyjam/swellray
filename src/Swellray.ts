@@ -146,6 +146,19 @@ export class Swellray {
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
         window.addEventListener("mousedown", () => this.isMouseDown = true, false);
         window.addEventListener("mouseup", () => this.isMouseDown = false, false);
+        window.addEventListener('keyup', (event) => {
+            if (event.key === 'd' || event.key === 'D') {
+                this.saveTextureAsPNG(this.bathymetryMap, 'bathymetryMap.png');
+                this.saveTextureAsPNG(this.energyMap, 'energyMap.png');
+            }
+            if (event.key === 'k' || event.key === 'K') {
+                this.updateEnergyMap()
+               console.log('dddd')
+        
+            }
+            
+          });
+       
         this.update();
         this.onWindowResize();
 
@@ -453,10 +466,11 @@ export class Swellray {
         this.sculptAreaPointer.rotateZ(-angle)
         this.scene.add(this.sculptAreaPointer);
     }
+    
     updateDisplacementTexture(i: number, j: number, height: number): void {
         const size = this.bathymetryMap.image.width;
         const index = (j * size + i) * 4;
-
+    
         const normalizedHeight = height / this.maxSculptHeight;
         this.bathymetryMap.image.data[index] = normalizedHeight;
         this.bathymetryMap.image.data[index + 1] = normalizedHeight;
@@ -464,9 +478,76 @@ export class Swellray {
         this.bathymetryMap.image.data[index + 3] = 1;
         // Indicates that the texture needs to be updated
         this.bathymetryMap.needsUpdate = true;
-
-
+    
+  
     }
+
+    updateEnergyMap(): void {
+        const size = this.bathymetryMap.image.width;
+        const radians = (this.swellDirection * Math.PI) / 180;
+    
+        const dx = Math.round(Math.cos(radians));
+        const dy = Math.round(Math.sin(radians));
+    
+        // Crear una copia de los datos de la imagen de bathymetryMap
+        const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
+    
+        for (let j = 0; j < size; j++) {
+            for (let i = 0; i < size; i++) {
+                let energyReduction = 0;
+                let x = i;
+                let y = j;
+    
+                while (x >= 0 && x < size && y >= 0 && y < size) {
+                    const index = (y * size + x) * 4;
+                    const normalizedHeight = bathymetryData[index];
+    
+                    energyReduction += normalizedHeight;
+                    energyReduction = Math.min(energyReduction, 1);
+    
+                    const energyIndex = (j * size + i) * 4;
+                    this.energyMap.image.data[energyIndex] = 1 - energyReduction;
+                    this.energyMap.image.data[energyIndex + 1] = 1 - energyReduction;
+                    this.energyMap.image.data[energyIndex + 2] = 1 - energyReduction;
+                    this.energyMap.image.data[energyIndex + 3] = 1;
+    
+                    x += dx;
+                    y += dy;
+                }
+            }
+        }
+    
+        this.energyMap.needsUpdate = true;
+    }
+     saveTextureAsPNG(texture, fileName) {
+        // Create a canvas to render the texture
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+      
+        // Set canvas size to match the texture
+        canvas.width = texture.image.width;
+        canvas.height = texture.image.height;
+      
+        // Create an ImageData object to store the texture data
+        const imageData = context.createImageData(canvas.width, canvas.height);
+      
+        // Copy the texture data to the ImageData object
+        for (let i = 0; i < texture.image.data.length; i++) {
+          imageData.data[i] = texture.image.data[i] * 255;
+        }
+      
+        // Put the ImageData object into the canvas
+        context.putImageData(imageData, 0, 0);
+      
+        // Create a link element to download the image
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = fileName;
+        link.click();
+      }
+      
+      // Usage:
+     
 
 
   logAlteredPosition(mesh) {
@@ -613,6 +694,7 @@ export class Swellray {
         this.scene.remove(this.floorPlane);
         const img = this.createEmptyMapLayer(this.AMOUNTX);
         this.buildFloor(img)
+       
     }
     async loadBathymetry(bathymetryMapImage: string) {
         const loader1 = new THREE.TextureLoader();
@@ -624,6 +706,7 @@ export class Swellray {
     }
     buildFloor(img: Texture) {
         this.bathymetryMap = img
+        this.energyMap = this.createEmptyMapLayer(this.AMOUNTX);
         this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
         this.floorGeometry.rotateX(-Math.PI / 2)
