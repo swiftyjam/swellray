@@ -26,9 +26,9 @@ export class Swellray {
     upperRuler: Group
     axisMarkerZ: THREE.Line
     axisMarkerX: THREE.Line
-    axisMarkerZTag:HTMLElement
-    axisMarkerXTag:HTMLElement
-    floorDepthTag:HTMLElement
+    axisMarkerZTag: HTMLElement
+    axisMarkerXTag: HTMLElement
+    floorDepthTag: HTMLElement
     extensionMeasure: Group
     clock: Clock
     controls: OrbitControls
@@ -49,7 +49,7 @@ export class Swellray {
     maxSculptHeight: number
     bathymetryMap: Texture
     energyMap: Texture
-    seaMap : Texture
+    seaMap: Texture
     chopMap: Texture
     seaMaterial: ShaderMaterial
     seaCenters: BufferAttribute
@@ -74,6 +74,7 @@ export class Swellray {
     sculptMode: string
     isMouseDown: boolean
 
+    debugCanvas: HTMLCanvasElement
     readonly MAGIC_N: number = 256
     readonly AMOUNTX: number = this.MAGIC_N
     readonly AMOUNTZ: number = this.MAGIC_N
@@ -97,6 +98,7 @@ export class Swellray {
         this.sculptMode = false;
         this.theme = defaultTheme
         this.clock = new THREE.Clock
+        this.debugCanvas = null
         this.fps = 60
         this.waves = []
         this.windDirection = 0
@@ -140,8 +142,8 @@ export class Swellray {
 
         this.buildSea();
         this.buildLegends();
-        this.setBrush(0,0,0,0);
-        
+        this.setBrush(0, 0, 0, 0);
+
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
         window.addEventListener("mousedown", () => this.isMouseDown = true, false);
@@ -153,12 +155,12 @@ export class Swellray {
             }
             if (event.key === 'k' || event.key === 'K') {
                 this.updateEnergyMap()
-               console.log('dddd')
-        
+                console.log('dddd')
+
             }
-            
-          });
-       
+
+        });
+
         this.update();
         this.onWindowResize();
 
@@ -241,7 +243,7 @@ export class Swellray {
         this.seaPlane = new THREE.Mesh(p_geometry, this.seaMaterial);
         this.seaPlane.rotateX(Math.PI);
         this.scene.add(this.seaPlane);
-        this.seaPlane.visible=true;
+        this.seaPlane.visible = false;
 
 
         const d_geometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
@@ -297,7 +299,7 @@ export class Swellray {
             unitcounter++;
         }
         this.scene.add(this.upperRuler)
-  
+
         //**END HEIGHTMARK */
 
         //**FLOOR MEASSURE */
@@ -333,15 +335,15 @@ export class Swellray {
 
         //AXIS MARKER
         const amz_mat = new THREE.LineBasicMaterial({ color: 0x00ee90 });
-        const amz_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(-(this.AMOUNTX * this.seaSpreadScale)/2,0,0),new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,0,0)]);
+        const amz_geo = new THREE.BufferGeometry().setFromPoints([new Vector3(-(this.AMOUNTX * this.seaSpreadScale) / 2, 0, 0), new Vector3((this.AMOUNTX * this.seaSpreadScale) / 2, 0, 0)]);
 
-        this.axisMarkerZ = new THREE.Line(amz_geo,amz_mat)
+        this.axisMarkerZ = new THREE.Line(amz_geo, amz_mat)
         this.scene.add(this.axisMarkerZ)
 
         const amx_mat = new THREE.LineBasicMaterial({ color: 0xee0090 });
-        const amx_geo= new THREE.BufferGeometry().setFromPoints([new Vector3(0,0,-(this.AMOUNTX * this.seaSpreadScale)/2),new Vector3(0,0,(this.AMOUNTX * this.seaSpreadScale)/2)]);
+        const amx_geo = new THREE.BufferGeometry().setFromPoints([new Vector3(0, 0, -(this.AMOUNTX * this.seaSpreadScale) / 2), new Vector3(0, 0, (this.AMOUNTX * this.seaSpreadScale) / 2)]);
 
-        this.axisMarkerX = new THREE.Line(amx_geo,amx_mat)
+        this.axisMarkerX = new THREE.Line(amx_geo, amx_mat)
         this.scene.add(this.axisMarkerX)
 
         const span_amx = document.createElement("span")
@@ -368,7 +370,7 @@ export class Swellray {
         span_sh.style.position = "absolute"
         this.floorDepthTag = span_sh
         this.container.appendChild(this.floorDepthTag)
-        
+
     }
     initCompass() {
         const c = document.getElementsByClassName('compassComponent')
@@ -393,57 +395,57 @@ export class Swellray {
         this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 0.25;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
-        this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 8), this.controls.maxDistance / (this.camera.aspect * 4), -this.controls.maxDistance / (this.camera.aspect * 2));
+        this.camera.position.set(this.controls.maxDistance / (this.camera.aspect*10 ), this.controls.maxDistance / (this.camera.aspect *2), this.controls.maxDistance / (this.camera.aspect*1 ));
         this.controls.update();
 
     }
     resetWaves() {
         this.waves = []
     }
-    toggleSculptMode(value){
+    toggleSculptMode(value) {
         this.sculptMode = value
         this.sculptAreaPointer.visible = value
         this.controls.enabled = !value
     }
-   
-    
-    setBrush(brushSizeX,brushSizeY,brushAttenuation,brushRotation,brushPower){
-        this.sculptDiameterA = brushSizeX; 
-        this.sculptDiameterB = brushSizeY; 
+
+
+    setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower) {
+        this.sculptDiameterA = brushSizeX;
+        this.sculptDiameterB = brushSizeY;
         this.sculptAttenuationFactor = brushAttenuation;
         this.sculptAngle = brushRotation;
         this.sculptPower = brushPower;
         this.createSculptAreaPointer();
-        
+
     }
     updateSculptPointer(intersect: any) {
-        
+
         this.sculptPointer.position.copy(intersect.point);
         this.sculptPointer.position.setY(this.sculptPointer.position.y * this.seaFloorVisAugment);
-        
-        this.moveTag(this.floorDepthTag,new Vector3().copy(intersect.point).setY(intersect.point.y + this.seaDepthScale * 2),false,false,true)
+
+        this.moveTag(this.floorDepthTag, new Vector3().copy(intersect.point).setY(intersect.point.y + this.seaDepthScale * 2), false, false, true)
         this.floorDepthTag.innerText = `Depth: ${(intersect.point.y).toPrecision(3)}m`
-        
+
     }
     updateSculptAreaPointer(intersect: any) {
-        
-        if(this.sculptAreaPointer !== "undefined")
-        this.sculptAreaPointer.position.copy(this.sculptPointer.position)
-        
+
+        if (this.sculptAreaPointer !== "undefined")
+            this.sculptAreaPointer.position.copy(this.sculptPointer.position)
+
     }
 
     createSculptPointer() {
         const geometry = new THREE.SphereGeometry(0.5, 16, 16);
         const material = new THREE.MeshBasicMaterial({ color: this.theme.props.colors.sculptPointerColor, wireframe: false });
         const sphere = new THREE.Mesh(geometry, material);
- // Ocultar inicialmente el cilindro
+        // Ocultar inicialmente el cilindro
         sphere.position.setY(this.floorPosition);
         this.sculptPointer = sphere;
         this.scene.add(this.sculptPointer)
-        
+
     }
     createSculptAreaPointer() {
-        if(this.sculptAreaPointer !== "undefined"){
+        if (this.sculptAreaPointer !== "undefined") {
             this.scene.remove(this.sculptAreaPointer);
         }
         const a = this.sculptDiameterA / 2;
@@ -469,11 +471,11 @@ export class Swellray {
         this.sculptAreaPointer.rotateZ(-angle)
         this.scene.add(this.sculptAreaPointer);
     }
-    
+
     updateDisplacementTexture(i: number, j: number, height: number): void {
         const size = this.bathymetryMap.image.width;
         const index = (j * size + i) * 4;
-    
+
         const normalizedHeight = height / this.maxSculptHeight;
         this.bathymetryMap.image.data[index] = normalizedHeight;
         this.bathymetryMap.image.data[index + 1] = normalizedHeight;
@@ -481,107 +483,171 @@ export class Swellray {
         this.bathymetryMap.image.data[index + 3] = 1;
         // Indicates that the texture needs to be updated
         this.bathymetryMap.needsUpdate = true;
-    
-  
+
+
     }
 
-    updateEnergyMap(): void {
-        const size = this.bathymetryMap.image.width;
-        const radians = (this.swellDirection * Math.PI) / 180;
-    
-        const dx = -Math.round(Math.cos(radians));
-        const dy = -Math.round(Math.sin(radians));
-    
-        // Crear una copia de los datos de la imagen de bathymetryMap
-        const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
-    
-        for (let j = 0; j < size; j++) {
-            for (let i = 0; i < size; i++) {
-                let energyReduction = 0;
-                let x = i;
-                let y = j;
-    
-                while (x >= 0 && x < size && y >= 0 && y < size) {
-                    const index = (y * size + x) * 4;
-                    const normalizedHeight = bathymetryData[index];
-    
-                    // energyReduction += normalizedHeight;
-                    energyReduction += 0.01 * normalizedHeight;
-                    energyReduction = Math.min(energyReduction, 1);
-    
-                    const energyIndex = (j * size + i) * 4;
-                    this.energyMap.image.data[energyIndex] = 1 - energyReduction;
-                    this.energyMap.image.data[energyIndex + 1] = 1 - energyReduction;
-                    this.energyMap.image.data[energyIndex + 2] = 1 - energyReduction;
-                    this.energyMap.image.data[energyIndex + 3] = 1;
-    
-                    x += dx;
-                    y += dy;
+   // Esta función se encarga de actualizar el mapa de energía, 
+// que en realidad es un mapa de fricción que representa cómo los montículos afectan las olas
+updateEnergyMap(): void {
+    // El tamaño de la imagen del mapa
+    const size = this.bathymetryMap.image.width;
+
+    // Se calculan los deltas para moverse a través del mapa en la dirección de la ola
+    const radians = this.swellDirection 
+    const dx = -Math.round(Math.cos(radians));
+    const dy = -Math.round(Math.sin(radians));
+
+    // Crear una copia de los datos de la imagen de bathymetryMap
+    const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
+
+    // Factores para el incremento de la fricción y su reducción
+    const frictionIncreaseFactor = 0.01;
+    const globalFrictionDecayFactor = .98;
+
+    // Recorremos cada píxel del mapa de fricción
+    for (let j = 0; j < size; j++) {
+        for (let i = 0; i < size; i++) {
+            let friction = 0;
+            let x = i;
+            let y = j;
+
+            // Mientras estamos dentro del mapa
+            while (x >= 0 && x < size && y >= 0 && y < size) {
+                // Calculamos el índice correspondiente a la posición (x, y)
+                const index = (y * size + x) * 4;
+                const normalizedHeight = bathymetryData[index];
+
+                // Si el píxel actual representa un montículo, incrementamos la fricción
+                if (normalizedHeight > 0) {
+                    friction += frictionIncreaseFactor * normalizedHeight;
+                    friction = Math.min(friction, 1);
                 }
+
+                // Decrementamos la fricción en cada paso, independientemente de la detección de nuevos montículos
+                 friction *= globalFrictionDecayFactor;
+
+                // Actualizamos el mapa de fricción con la fricción calculada
+                const frictionIndex = (y * size + x) * 4;
+                this.energyMap.image.data[frictionIndex] = 1 - friction;
+                this.energyMap.image.data[frictionIndex + 1] = 1 - friction;
+                this.energyMap.image.data[frictionIndex + 2] = 1 - friction;
+                this.energyMap.image.data[frictionIndex + 3] = 1;
+
+                // Nos movemos a la siguiente posición en la dirección de la ola
+                x += dx;
+                y += dy;
             }
         }
-    
-        this.energyMap.needsUpdate = true;
-        this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
     }
-     saveTextureAsPNG(texture, fileName) {
+
+    // Indicamos que el mapa de fricción necesita una actualización
+    this.energyMap.needsUpdate = true;
+    // Actualizamos la textura utilizada por el material del mar con el nuevo mapa de fricción
+    this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
+
+  this.drawMaps()
+}
+
+drawMaps(): void {
+    // Creamos el canvas si aún no se ha creado
+    if (!this.debugCanvas) {
+        this.debugCanvas = document.createElement('canvas');
+        this.debugCanvas.style.position = 'absolute';
+        this.debugCanvas.style.pointerEvents = 'none';
+        this.debugCanvas.width = this.renderer.domElement.width;
+        this.debugCanvas.height = this.renderer.domElement.height;
+        this.renderer.domElement.parentElement.appendChild(this.debugCanvas);
+    }
+    
+    // Obtenemos el contexto del canvas
+    const context = this.debugCanvas.getContext('2d');
+
+    // Dibujamos cada textura en la esquina inferior derecha
+    [this.bathymetryMap, this.energyMap].forEach((texture, index) => {
+        // Creamos un canvas temporal para renderizar la textura
+        const canvas = document.createElement('canvas');
+        const tempContext = canvas.getContext('2d');
+        
+        // Ajustamos el tamaño del canvas para que coincida con la textura
+        canvas.width = texture.image.width;
+        canvas.height = texture.image.height;
+
+        // Creamos un objeto ImageData para almacenar los datos de la textura
+        const imageData = tempContext.createImageData(canvas.width, canvas.height);
+
+        // Copiamos los datos de la textura al objeto ImageData
+        for (let i = 0; i < texture.image.data.length; i++) {
+            imageData.data[i] = texture.image.data[i] * 255;
+        }
+
+        // Colocamos el objeto ImageData en el canvas temporal
+        tempContext.putImageData(imageData, 0, 0);
+
+        // Dibujamos el canvas temporal en el canvas principal
+        const offset = index * 256;
+        context.drawImage(canvas, this.debugCanvas.width - canvas.width - offset, this.debugCanvas.height - canvas.height);
+    });
+}
+
+    saveTextureAsPNG(texture, fileName) {
         // Create a canvas to render the texture
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-      
+
         // Set canvas size to match the texture
         canvas.width = texture.image.width;
         canvas.height = texture.image.height;
-      
+
         // Create an ImageData object to store the texture data
         const imageData = context.createImageData(canvas.width, canvas.height);
-      
+
         // Copy the texture data to the ImageData object
         for (let i = 0; i < texture.image.data.length; i++) {
-          imageData.data[i] = texture.image.data[i] * 255;
+            imageData.data[i] = texture.image.data[i] * 255;
         }
-      
+
         // Put the ImageData object into the canvas
         context.putImageData(imageData, 0, 0);
-      
+
         // Create a link element to download the image
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
         link.download = fileName;
         link.click();
-      }
-      
-      // Usage:
-     
+    }
+
+    // Usage:
 
 
-  logAlteredPosition(mesh) {
-  const width = 1;
-  const height = 1;
 
-  const renderer = new THREE.WebGLRenderer();
-  const renderTarget = new THREE.WebGLRenderTarget(width, height);
+    logAlteredPosition(mesh) {
+        const width = 1;
+        const height = 1;
 
-  const scene = new THREE.Scene();
-  scene.add(mesh);
+        const renderer = new THREE.WebGLRenderer();
+        const renderTarget = new THREE.WebGLRenderTarget(width, height);
 
-  const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1, 1000);
-  camera.position.set(0, 0, 2);
-  camera.lookAt(0, 0, 0);
+        const scene = new THREE.Scene();
+        scene.add(mesh);
 
-  renderer.setRenderTarget(renderTarget);
-  renderer.render(scene, camera);
-  renderer.setRenderTarget(null);
+        const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1, 1000);
+        camera.position.set(0, 0, 2);
+        camera.lookAt(0, 0, 0);
 
-  const buffer = new Float32Array(width * height * 4);
-  renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+        renderer.setRenderTarget(renderTarget);
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(null);
 
-  const x = buffer[0];
-  const y = buffer[1];
-  const z = buffer[2];
+        const buffer = new Float32Array(width * height * 4);
+        renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
 
-  console.log(`Altered position at (0, 0, 0): (${x}, ${y}, ${z})`);
-}
+        const x = buffer[0];
+        const y = buffer[1];
+        const z = buffer[2];
+
+        console.log(`Altered position at (0, 0, 0): (${x}, ${y}, ${z})`);
+    }
     getElipseAttenuation(distance: number, di: number, dj: number): number {
         const ellipseRotation = this.sculptAngle * (Math.PI / 180); // Convierte a radianes
         const a = this.sculptDiameterA;
@@ -694,12 +760,12 @@ export class Swellray {
         }
         return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
     }
-   
+
     async setBathymetry(bathymetryMapImage: string) {
         this.scene.remove(this.floorPlane);
         const img = this.createEmptyMapLayer(this.AMOUNTX);
         this.buildFloor(img)
-       
+
     }
     async loadBathymetry(bathymetryMapImage: string) {
         const loader1 = new THREE.TextureLoader();
@@ -754,19 +820,19 @@ export class Swellray {
         this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
         this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
 
-        
 
-            // Usar la instancia de raycaster existente en lugar de crear una nueva
-            this.raycaster.setFromCamera(this.mouse, this.camera);
-            const intersects = this.raycaster.intersectObjects([this.floorPlane]);
 
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                this.updateSculptPointer(intersect);
-                
-                if (this.sculptMode) {
-                    this.updateSculptAreaPointer(intersect)
-                    if (!this.isMouseDown) return;
+        // Usar la instancia de raycaster existente en lugar de crear una nueva
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects([this.floorPlane]);
+
+        if (intersects.length > 0) {
+            const intersect = intersects[0];
+            this.updateSculptPointer(intersect);
+
+            if (this.sculptMode) {
+                this.updateSculptAreaPointer(intersect)
+                if (!this.isMouseDown) return;
                 // Limitar la frecuencia de llamadas a la función sculpt
                 const currentTime = performance.now();
                 if (currentTime - this.lastSculptTime >= this.sculptInterval) {
@@ -804,11 +870,11 @@ export class Swellray {
         this.axisMarkerZ.position.setZ(intersection.z)
         this.axisMarkerX.position.setX(intersection.x)
 
-        this.moveTag(this.axisMarkerXTag,new Vector3(intersection.x, 0, (this.AMOUNTX * this.seaSpreadScale)/2),false,false,true)
-        this.axisMarkerXTag.innerText = `X: ${((this.AMOUNTX * this.seaSpreadScale)/2 - intersection.x).toPrecision(3)}m`
+        this.moveTag(this.axisMarkerXTag, new Vector3(intersection.x, 0, (this.AMOUNTX * this.seaSpreadScale) / 2), false, false, true)
+        this.axisMarkerXTag.innerText = `X: ${((this.AMOUNTX * this.seaSpreadScale) / 2 - intersection.x).toPrecision(3)}m`
 
-        this.moveTag(this.axisMarkerZTag,new Vector3((this.AMOUNTX * this.seaSpreadScale)/2,0,intersection.z),false,false,true)
-        this.axisMarkerZTag.innerText = `Z: ${((this.AMOUNTX * this.seaSpreadScale)/2 - intersection.z).toPrecision(3)}m`
+        this.moveTag(this.axisMarkerZTag, new Vector3((this.AMOUNTX * this.seaSpreadScale) / 2, 0, intersection.z), false, false, true)
+        this.axisMarkerZTag.innerText = `Z: ${((this.AMOUNTX * this.seaSpreadScale) / 2 - intersection.z).toPrecision(3)}m`
 
     };
     moveTag(element: HTMLElement, coords: Vector3, lockY: boolean, lockX: boolean, canOut: boolean) {

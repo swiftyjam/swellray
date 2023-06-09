@@ -60,7 +60,7 @@ const vertex = `
         float f = k*(dot(d,p.xz)-c*uTime);
         
         // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
-        float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
+        float a = (steepness/k) * length(uSpotOrientation.xy + d.xy)+ windDisplace;
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),
@@ -76,7 +76,7 @@ const vertex = `
         // float vertical = min(a*cos(f), vDepth );
         //float vertical = a*cos(f);
         float vertical = min(a*cos(f), vDepth - 1. * uScale  );
-        vertical = vertical - windDisplace;
+        vertical = vertical;
         vSteepness += (-vertical) / calculatedWavelength ;
         return vec3(
             d.x*(a*sin(f)),
@@ -94,7 +94,7 @@ const vertex = `
       
      
     
-        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G * length(uSpotOrientation.xy + uWindDirection.xy)/4.;
+        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G * length(uSpotOrientation.xy + uWindDirection.xy)/6.;
         vWindDirection = vec2(uWindDirection.x,-uWindDirection.y);
         float windDisplace = (texture2D(uNoiseMap, uv  ).r * windWaveHeight * uScale )  ;
     
