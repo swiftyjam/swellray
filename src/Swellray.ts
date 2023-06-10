@@ -155,8 +155,6 @@ export class Swellray {
             }
             if (event.key === 'k' || event.key === 'K') {
                 this.updateEnergyMap()
-                console.log('dddd')
-
             }
 
         });
@@ -395,7 +393,7 @@ export class Swellray {
         this.controls.minDistance = this.AMOUNTX * this.seaSpreadScale * 0.25;
         this.controls.maxDistance = this.AMOUNTX * this.seaSpreadScale * 2;
         this.controls.maxPolarAngle = Math.PI / 2;
-        this.camera.position.set(this.controls.maxDistance / (this.camera.aspect*10 ), this.controls.maxDistance / (this.camera.aspect *2), this.controls.maxDistance / (this.camera.aspect*1 ));
+        this.camera.position.set(this.controls.maxDistance / (this.camera.aspect * 10), this.controls.maxDistance / (this.camera.aspect * 2), this.controls.maxDistance / (this.camera.aspect * 1));
         this.controls.update();
 
     }
@@ -487,108 +485,118 @@ export class Swellray {
 
     }
 
-   // Esta función se encarga de actualizar el mapa de energía, 
-// que en realidad es un mapa de fricción que representa cómo los montículos afectan las olas
-updateEnergyMap(): void {
-    // El tamaño de la imagen del mapa
-    const size = this.bathymetryMap.image.width;
-
-    // Se calculan los deltas para moverse a través del mapa en la dirección de la ola
-    const radians = this.swellDirection 
-    const dx = -Math.round(Math.cos(radians));
-    const dy = -Math.round(Math.sin(radians));
-
-    // Crear una copia de los datos de la imagen de bathymetryMap
-    const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
-
-    // Factores para el incremento de la fricción y su reducción
-    const frictionIncreaseFactor = 0.01;
-    const globalFrictionDecayFactor = .98;
-
-    // Recorremos cada píxel del mapa de fricción
-    for (let j = 0; j < size; j++) {
-        for (let i = 0; i < size; i++) {
-            let friction = 0;
-            let x = i;
-            let y = j;
-
-            // Mientras estamos dentro del mapa
-            while (x >= 0 && x < size && y >= 0 && y < size) {
+    updateEnergyMap(): void {
+        // El tamaño de la imagen del mapa
+        const size = this.bathymetryMap.image.width;
+    
+        // Se calculan los deltas para moverse a través del mapa en la dirección de la ola
+        const radians = this.swellDirection;
+        const dx = Math.cos(radians);
+        const dy = Math.sin(radians);
+    
+        // Crear una copia de los datos de la imagen de bathymetryMap
+        const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
+    
+        // Factores para el incremento de la fricción y su reducción
+        const frictionIncreaseFactor = 1.;
+        const globalFrictionDecayFactor = .995;  // Decay factor ajustado para que sea menor que 1
+    
+        // Crear un nuevo mapa de fricción
+        const newFrictionMap = new Float32Array(size * size);
+    
+        // Recorremos cada píxel del mapa de fricción
+        for (let j = 0; j < size; j++) {
+            for (let i = 0; i < size; i++) {
                 // Calculamos el índice correspondiente a la posición (x, y)
-                const index = (y * size + x) * 4;
+                const index = (j * size + i) * 4;
                 const normalizedHeight = bathymetryData[index];
-
+    
                 // Si el píxel actual representa un montículo, incrementamos la fricción
-                if (normalizedHeight > 0) {
-                    friction += frictionIncreaseFactor * normalizedHeight;
+                let friction = 0;
+                if (normalizedHeight > 1.) {
+                     friction += frictionIncreaseFactor * (normalizedHeight-1.);
+                    // friction += normalizedHeight;
                     friction = Math.min(friction, 1);
                 }
-
-                // Decrementamos la fricción en cada paso, independientemente de la detección de nuevos montículos
-                 friction *= globalFrictionDecayFactor;
-
-                // Actualizamos el mapa de fricción con la fricción calculada
-                const frictionIndex = (y * size + x) * 4;
-                this.energyMap.image.data[frictionIndex] = 1 - friction;
-                this.energyMap.image.data[frictionIndex + 1] = 1 - friction;
-                this.energyMap.image.data[frictionIndex + 2] = 1 - friction;
-                this.energyMap.image.data[frictionIndex + 3] = 1;
-
-                // Nos movemos a la siguiente posición en la dirección de la ola
-                x += dx;
-                y += dy;
+    
+                // Propagamos la fricción en la dirección de la onda
+                let x = i;
+                let y = j;
+                while (x >= 0 && x < size && y >= 0 && y < size) {
+                    // Calculamos el índice correspondiente a la posición (x, y)
+                    const frictionIndex = Math.round(y) * size + Math.round(x);
+                    // Actualizamos el mapa de fricción solo si la fricción calculada es mayor que la existente
+                    newFrictionMap[frictionIndex] = Math.max(newFrictionMap[frictionIndex], friction);
+    
+                    // Nos movemos a la siguiente posición en la dirección de la ola
+                    x += dx;
+                    y += dy;
+    
+                    // Decrementamos la fricción en cada paso, independientemente de la detección de nuevos montículos
+                    friction *= globalFrictionDecayFactor;
+                }
             }
         }
-    }
-
-    // Indicamos que el mapa de fricción necesita una actualización
-    this.energyMap.needsUpdate = true;
-    // Actualizamos la textura utilizada por el material del mar con el nuevo mapa de fricción
-    this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
-
-  this.drawMaps()
-}
-
-drawMaps(): void {
-    // Creamos el canvas si aún no se ha creado
-    if (!this.debugCanvas) {
-        this.debugCanvas = document.createElement('canvas');
-        this.debugCanvas.style.position = 'absolute';
-        this.debugCanvas.style.pointerEvents = 'none';
-        this.debugCanvas.width = this.renderer.domElement.width;
-        this.debugCanvas.height = this.renderer.domElement.height;
-        this.renderer.domElement.parentElement.appendChild(this.debugCanvas);
+    
+        // Actualizamos el mapa de fricción con el nuevo mapa
+        for (let i = 0; i < size * size * 4; i += 4) {
+          
+            this.energyMap.image.data[i] = 1 - newFrictionMap[i / 4];
+            this.energyMap.image.data[i + 1] = 1 - newFrictionMap[i / 4];
+            this.energyMap.image.data[i + 2] = 1 - newFrictionMap[i / 4];
+            this.energyMap.image.data[i + 3] = 1;
+            
+        }
+    
+        // Indicamos que el mapa de fricción necesita una actualización
+        this.energyMap.needsUpdate = true;
+        // Actualizamos la textura utilizada por el material del mar con el nuevo mapa de fricción
+        this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
+    
+        this.drawMaps();
     }
     
-    // Obtenemos el contexto del canvas
-    const context = this.debugCanvas.getContext('2d');
 
-    // Dibujamos cada textura en la esquina inferior derecha
-    [this.bathymetryMap, this.energyMap].forEach((texture, index) => {
-        // Creamos un canvas temporal para renderizar la textura
-        const canvas = document.createElement('canvas');
-        const tempContext = canvas.getContext('2d');
-        
-        // Ajustamos el tamaño del canvas para que coincida con la textura
-        canvas.width = texture.image.width;
-        canvas.height = texture.image.height;
-
-        // Creamos un objeto ImageData para almacenar los datos de la textura
-        const imageData = tempContext.createImageData(canvas.width, canvas.height);
-
-        // Copiamos los datos de la textura al objeto ImageData
-        for (let i = 0; i < texture.image.data.length; i++) {
-            imageData.data[i] = texture.image.data[i] * 255;
+    drawMaps(): void {
+        // Creamos el canvas si aún no se ha creado
+        if (!this.debugCanvas) {
+            this.debugCanvas = document.createElement('canvas');
+            this.debugCanvas.style.position = 'absolute';
+            this.debugCanvas.style.pointerEvents = 'none';
+            this.debugCanvas.width = this.renderer.domElement.width;
+            this.debugCanvas.height = this.renderer.domElement.height;
+            this.renderer.domElement.parentElement.appendChild(this.debugCanvas);
         }
 
-        // Colocamos el objeto ImageData en el canvas temporal
-        tempContext.putImageData(imageData, 0, 0);
+        // Obtenemos el contexto del canvas
+        const context = this.debugCanvas.getContext('2d');
 
-        // Dibujamos el canvas temporal en el canvas principal
-        const offset = index * 256;
-        context.drawImage(canvas, this.debugCanvas.width - canvas.width - offset, this.debugCanvas.height - canvas.height);
-    });
-}
+        // Dibujamos cada textura en la esquina inferior derecha
+        [this.bathymetryMap, this.energyMap].forEach((texture, index) => {
+            // Creamos un canvas temporal para renderizar la textura
+            const canvas = document.createElement('canvas');
+            const tempContext = canvas.getContext('2d');
+
+            // Ajustamos el tamaño del canvas para que coincida con la textura
+            canvas.width = texture.image.width;
+            canvas.height = texture.image.height;
+
+            // Creamos un objeto ImageData para almacenar los datos de la textura
+            const imageData = tempContext.createImageData(canvas.width, canvas.height);
+
+            // Copiamos los datos de la textura al objeto ImageData
+            for (let i = 0; i < texture.image.data.length; i++) {
+                imageData.data[i] = texture.image.data[i] * 255;
+            }
+
+            // Colocamos el objeto ImageData en el canvas temporal
+            tempContext.putImageData(imageData, 0, 0);
+
+            // Dibujamos el canvas temporal en el canvas principal
+            const offset = index * 256;
+            context.drawImage(canvas, this.debugCanvas.width - canvas.width - offset, this.debugCanvas.height - canvas.height);
+        });
+    }
 
     saveTextureAsPNG(texture, fileName) {
         // Create a canvas to render the texture

@@ -59,8 +59,10 @@ const vertex = `
         vec2 d = normalize(vec2(wave.x,-wave.y) + (vWindDirection * windDisplace));
         float f = k*(dot(d,p.xz)-c*uTime);
         
-        // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy);
-        float a = (steepness/k) * length(uSpotOrientation.xy + d.xy)+ windDisplace;
+        //No need of this anymore ;)
+        // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy)+ windDisplace;
+
+         float a =  (steepness/k) + windDisplace;
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),
