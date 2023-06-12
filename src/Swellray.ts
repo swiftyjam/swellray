@@ -8,7 +8,7 @@ import { floorFragment } from "../shaders/floorFragment.js"
 import { floorVertex } from "../shaders/floorVertex.js"
 import * as defaultTheme from "../themes/default.json";
 import { Sculptor } from './Sculptor.js';
-import { log } from 'console';
+
 export class Swellray {
     container: HTMLElement
     scene: Scene
@@ -22,6 +22,7 @@ export class Swellray {
     sculptInterval: number
     sculptPointer: Mesh
     sculptAreaPointer: THREE.Line
+    sculptInitialHeights: Float32Array
     pointer: Vector3
     upperRuler: Group
     axisMarkerZ: THREE.Line
@@ -72,7 +73,7 @@ export class Swellray {
 
     mode: Array<string>
     sculptMode: string
-    isMouseDown: boolean
+    isPointerDown: boolean
 
     debugCanvas: HTMLCanvasElement
     readonly MAGIC_N: number = 256
@@ -96,6 +97,7 @@ export class Swellray {
         }
         this.mode = ['preset', 'sculpt'];
         this.sculptMode = false;
+
         this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.debugCanvas = null
@@ -129,6 +131,7 @@ export class Swellray {
         this.sculptAngle = 45
         this.sculptPower = 2
         this.sculptAttenuationFactor = 6
+
         this.maxSculptHeight = this.seaDepthScale
         this.lastSculptTime = 0;
         this.sculptInterval = 16; // Limitar a llamar la función sculpt cada 16 ms (aproximadamente 60 FPS)
@@ -136,7 +139,7 @@ export class Swellray {
         this.createSculptAreaPointer();
         this.createSculptPointer()
         this.mouse = new THREE.Vector2()
-        this.isMouseDown = false;
+        this.isPointerDown = false;
         this.initCompass();
         this.initControls();
 
@@ -146,8 +149,10 @@ export class Swellray {
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
-        window.addEventListener("mousedown", () => this.isMouseDown = true, false);
-        window.addEventListener("mouseup", () => this.isMouseDown = false, false);
+        window.addEventListener("pointerdown", this.onPointerDown.bind(this));
+        window.addEventListener("pointerup", this.onPointerUp.bind(this));
+        window.addEventListener("mousedown", this.onPointerDown.bind(this));
+        window.addEventListener("mouseup", this.onPointerUp.bind(this));
         window.addEventListener('keyup', (event) => {
             if (event.key === 'd' || event.key === 'D') {
                 this.saveTextureAsPNG(this.bathymetryMap, 'bathymetryMap.png');
@@ -167,6 +172,7 @@ export class Swellray {
 
     buildSea() {
         const positions = new Float32Array(this.CENTERS_NUMBER * 3);
+
         const scales = new Float32Array(this.CENTERS_NUMBER);
         let i = 0, j = 0;
 
@@ -488,37 +494,37 @@ export class Swellray {
     updateEnergyMap(): void {
         // El tamaño de la imagen del mapa
         const size = this.bathymetryMap.image.width;
-    
+
         // Se calculan los deltas para moverse a través del mapa en la dirección de la ola
         const radians = this.swellDirection;
         const dx = Math.cos(radians);
         const dy = Math.sin(radians);
-    
+
         // Crear una copia de los datos de la imagen de bathymetryMap
         const bathymetryData = new Float32Array(this.bathymetryMap.image.data);
-    
+
         // Factores para el incremento de la fricción y su reducción
         const frictionIncreaseFactor = 1.;
         const globalFrictionDecayFactor = .995;  // Decay factor ajustado para que sea menor que 1
-    
+
         // Crear un nuevo mapa de fricción
         const newFrictionMap = new Float32Array(size * size);
-    
+
         // Recorremos cada píxel del mapa de fricción
         for (let j = 0; j < size; j++) {
             for (let i = 0; i < size; i++) {
                 // Calculamos el índice correspondiente a la posición (x, y)
                 const index = (j * size + i) * 4;
                 const normalizedHeight = bathymetryData[index];
-    
+
                 // Si el píxel actual representa un montículo, incrementamos la fricción
                 let friction = 0;
                 if (normalizedHeight > 1.) {
-                     friction += frictionIncreaseFactor * (normalizedHeight-1.);
+                    friction += frictionIncreaseFactor * (normalizedHeight - 1.);
                     // friction += normalizedHeight;
                     friction = Math.min(friction, 1);
                 }
-    
+
                 // Propagamos la fricción en la dirección de la onda
                 let x = i;
                 let y = j;
@@ -527,35 +533,35 @@ export class Swellray {
                     const frictionIndex = Math.round(y) * size + Math.round(x);
                     // Actualizamos el mapa de fricción solo si la fricción calculada es mayor que la existente
                     newFrictionMap[frictionIndex] = Math.max(newFrictionMap[frictionIndex], friction);
-    
+
                     // Nos movemos a la siguiente posición en la dirección de la ola
                     x += dx;
                     y += dy;
-    
+
                     // Decrementamos la fricción en cada paso, independientemente de la detección de nuevos montículos
                     friction *= globalFrictionDecayFactor;
                 }
             }
         }
-    
+
         // Actualizamos el mapa de fricción con el nuevo mapa
         for (let i = 0; i < size * size * 4; i += 4) {
-          
+
             this.energyMap.image.data[i] = 1 - newFrictionMap[i / 4];
             this.energyMap.image.data[i + 1] = 1 - newFrictionMap[i / 4];
             this.energyMap.image.data[i + 2] = 1 - newFrictionMap[i / 4];
             this.energyMap.image.data[i + 3] = 1;
-            
+
         }
-    
+
         // Indicamos que el mapa de fricción necesita una actualización
         this.energyMap.needsUpdate = true;
         // Actualizamos la textura utilizada por el material del mar con el nuevo mapa de fricción
         this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
-    
+
         this.drawMaps();
     }
-    
+
 
     drawMaps(): void {
         // Creamos el canvas si aún no se ha creado
@@ -629,52 +635,32 @@ export class Swellray {
 
 
 
-    logAlteredPosition(mesh) {
-        const width = 1;
-        const height = 1;
 
-        const renderer = new THREE.WebGLRenderer();
-        const renderTarget = new THREE.WebGLRenderTarget(width, height);
-
-        const scene = new THREE.Scene();
-        scene.add(mesh);
-
-        const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1, 1000);
-        camera.position.set(0, 0, 2);
-        camera.lookAt(0, 0, 0);
-
-        renderer.setRenderTarget(renderTarget);
-        renderer.render(scene, camera);
-        renderer.setRenderTarget(null);
-
-        const buffer = new Float32Array(width * height * 4);
-        renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
-
-        const x = buffer[0];
-        const y = buffer[1];
-        const z = buffer[2];
-
-        console.log(`Altered position at (0, 0, 0): (${x}, ${y}, ${z})`);
-    }
     getElipseAttenuation(distance: number, di: number, dj: number): number {
         const ellipseRotation = this.sculptAngle * (Math.PI / 180); // Convierte a radianes
         const a = this.sculptDiameterA;
         const b = this.sculptDiameterB;
-
+    
         // Aplica la rotación
         const cosTheta = Math.cos(ellipseRotation);
         const sinTheta = Math.sin(ellipseRotation);
         const rotatedDi = di * cosTheta - dj * sinTheta;
         const rotatedDj = di * sinTheta + dj * cosTheta;
-
+    
         const ellipseDistance = Math.sqrt((rotatedDi * rotatedDi) / (a * a) + (rotatedDj * rotatedDj) / (b * b));
-
+    
         if (ellipseDistance <= 1) {
-            return Math.pow(1 - ellipseDistance, this.sculptAttenuationFactor); // Retorna una atenuación gradual desde el centro hacia los extremos con el grado de atenuación ajustado
+            // Retorna una atenuación basada en una función gaussiana desde el centro hacia los extremos
+            const gaussianCenter = 0;
+            const gaussianWidth =1.- this.sculptAttenuationFactor;  // Ajusta este valor para cambiar la suavidad de la transición
+            return Math.exp(-Math.pow(ellipseDistance - gaussianCenter, 2) / (2 * gaussianWidth * gaussianWidth)); 
         }
-
+    
         return 0;
     }
+    
+    
+    
     sculpt(intersect: THREE.Intersection): void {
         const size = this.floorGeometry.parameters.widthSegments;
         const vertices = this.floorGeometry.attributes.position.array;
@@ -702,12 +688,16 @@ export class Swellray {
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < Math.max(this.sculptDiameterA, this.sculptDiameterB)) {
-                        const attenuation = this.getElipseAttenuation(distance, di, dj);
-                        const deltaHeight = attenuation * this.sculptPower;
-                        const newHeight = vertices[index + 1] + deltaHeight;
-
-                        if (newHeight <= this.maxSculptHeight * 2) {
-                            vertices[index + 1] = newHeight;
+                        const attenuation = this.getElipseAttenuation(distance, di, dj );
+                        const deltaHeight = attenuation * this.sculptPower ;
+                        const initialHeight = this.sculptInitialHeights[index];
+                        // const newHeight = vertices[index + 1] + deltaHeight;
+                        const newHeight = initialHeight + deltaHeight; //! Super cool
+                       // const newHeight = vertices[index + 1] * (1 + deltaHeight);
+    
+                        // Asegúrate de que la nueva altura no supere el incremento máximo
+                        if (newHeight - initialHeight <=  this.sculptPower && newHeight <= this.maxSculptHeight * 2) {
+                            vertices[index + 1] =  newHeight;
                             this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
                         }
                     }
@@ -789,6 +779,7 @@ export class Swellray {
         this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap;
         this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
+        this.sculptInitialHeights = new Float32Array(this.floorGeometry.attributes.position.array.length)
         this.floorGeometry.rotateX(-Math.PI / 2)
         //const seaFloor_geometry = new THREE.PlaneGeometry(256, 256, 256, 256);
 
@@ -839,9 +830,11 @@ export class Swellray {
             this.updateSculptPointer(intersect);
 
             if (this.sculptMode) {
+
                 this.updateSculptAreaPointer(intersect)
-                if (!this.isMouseDown) return;
+                if (!this.isPointerDown) return;
                 // Limitar la frecuencia de llamadas a la función sculpt
+
                 const currentTime = performance.now();
                 if (currentTime - this.lastSculptTime >= this.sculptInterval) {
                     this.bathymetryMap.needsUpdate = true
@@ -851,6 +844,36 @@ export class Swellray {
 
             }
         }
+    }
+    onPointerUp(e) {
+        this.isPointerDown = false
+        if (this.sculptMode) {
+            // Limpiar sculptInitialHeights
+            // Registra la altura inicial de cada vértice
+            const vertices = this.floorGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                this.sculptInitialHeights[i] = vertices[i + 1];
+            }
+            // this.sculptInitialHeights.fill(0);
+            this.updateEnergyMap()
+        }
+
+    }
+    onPointerDown(e) {
+        // Cuando comienzas a arrastrar el ratón
+        console.log('what');
+
+        this.isPointerDown = true;
+        if (this.sculptMode) {
+            //  // Registra la altura inicial de cada vértice
+            //     const vertices = this.floorGeometry.attributes.position.array;
+            //     for (let i = 0; i < vertices.length; i += 3) {
+            //         this.sculptInitialHeights[i] = vertices[i + 1];
+            //     }
+            // console.log(this.sculptInitialHeights);
+
+        }
+
     }
     onWindowResize() {
 
