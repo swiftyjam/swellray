@@ -505,7 +505,7 @@ export class Swellray {
 
         // Factores para el incremento de la fricción y su reducción
         const frictionIncreaseFactor = 1.;
-        const globalFrictionDecayFactor = .995;  // Decay factor ajustado para que sea menor que 1
+        const globalFrictionDecayFactor = .985;  // Decay factor ajustado para que sea menor que 1
 
         // Crear un nuevo mapa de fricción
         const newFrictionMap = new Float32Array(size * size);
@@ -519,8 +519,8 @@ export class Swellray {
 
                 // Si el píxel actual representa un montículo, incrementamos la fricción
                 let friction = 0;
-                if (normalizedHeight > 1.) {
-                    friction += frictionIncreaseFactor * (normalizedHeight - 1.);
+                if (normalizedHeight > 0.9) {
+                    friction += frictionIncreaseFactor * (normalizedHeight - .9);
                     // friction += normalizedHeight;
                     friction = Math.min(friction, 1);
                 }
@@ -652,12 +652,14 @@ export class Swellray {
         if (ellipseDistance <= 1) {
             // Retorna una atenuación basada en una función gaussiana desde el centro hacia los extremos
             const gaussianCenter = 0;
-            const gaussianWidth =1.- this.sculptAttenuationFactor;  // Ajusta este valor para cambiar la suavidad de la transición
+            // Aquí introducimos sculptPower en la ecuación
+            const gaussianWidth = (1 - this.sculptAttenuationFactor) / Math.sqrt(this.sculptPower);  
             return Math.exp(-Math.pow(ellipseDistance - gaussianCenter, 2) / (2 * gaussianWidth * gaussianWidth)); 
         }
     
         return 0;
     }
+    
     
     
     
@@ -688,16 +690,20 @@ export class Swellray {
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < Math.max(this.sculptDiameterA, this.sculptDiameterB)) {
-                        const attenuation = this.getElipseAttenuation(distance, di, dj );
-                        const deltaHeight = attenuation * this.sculptPower ;
+                        const attenuation = this.getElipseAttenuation(distance, di, dj);
+                        const deltaHeight = this.sculptPower * attenuation;
                         const initialHeight = this.sculptInitialHeights[index];
-                        // const newHeight = vertices[index + 1] + deltaHeight;
-                        const newHeight = initialHeight + deltaHeight; //! Super cool
-                       // const newHeight = vertices[index + 1] * (1 + deltaHeight);
-    
+                        const currentHeight = vertices[index + 1];
+                        const targetHeight = initialHeight + deltaHeight;
+                        
+                        // En lugar de usar lerp, incrementamos la altura actual
+                        // de forma proporcional a la atenuación. Sin embargo, limitamos el efecto de
+                        // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
+                        const newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.1);
+                        
                         // Asegúrate de que la nueva altura no supere el incremento máximo
-                        if (newHeight - initialHeight <=  this.sculptPower && newHeight <= this.maxSculptHeight * 2) {
-                            vertices[index + 1] =  newHeight;
+                        if (newHeight - initialHeight <= this.sculptPower && newHeight <= this.maxSculptHeight * 2) {
+                            vertices[index + 1] = newHeight;
                             this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
                         }
                     }
