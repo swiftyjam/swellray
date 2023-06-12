@@ -699,12 +699,12 @@ export class Swellray {
                         // En lugar de usar lerp, incrementamos la altura actual
                         // de forma proporcional a la atenuación. Sin embargo, limitamos el efecto de
                         // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
-                        const newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.1);
+                        const newHeight = initialHeight + deltaHeight;
                         
                         // Asegúrate de que la nueva altura no supere el incremento máximo
                         if (newHeight - initialHeight <= this.sculptPower && newHeight <= this.maxSculptHeight * 2) {
-                            vertices[index + 1] = newHeight;
-                            this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
+                            vertices[index + 1] = newHeight; 
+                            this.updateDisplacementTexture(ni, nj, newHeight);
                         }
                     }
                 }
