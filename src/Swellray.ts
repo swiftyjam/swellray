@@ -42,6 +42,8 @@ export class Swellray {
     delta: number
     fps: number
     waves: Array<TorochoidalWave>
+    brushDirection: number
+    brushMode: number
     sculptDiameterA: number
     sculptDiameterB: number
     sculptAngle: number
@@ -126,6 +128,8 @@ export class Swellray {
         this.camera.position.set(400, 200, 0);
         this.pointer = new Vector3()
         this.raycaster = new THREE.Raycaster()
+        this.brushDirection = 1
+        this.brushMode = 1
         this.sculptDiameterA = 50
         this.sculptDiameterB = 35
         this.sculptAngle = 45
@@ -145,7 +149,7 @@ export class Swellray {
 
         this.buildSea();
         this.buildLegends();
-        this.setBrush(0, 0, 0, 0);
+        this.setBrush(0, 0, 0, 0, 1);
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
         window.addEventListener('pointermove', this.onPointerMove.bind(this))
@@ -413,7 +417,9 @@ export class Swellray {
     }
 
 
-    setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower) {
+    setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower, brushMode, brushDirection) {
+        this.brushDirection = brushDirection
+        this.brushMode = brushMode
         this.sculptDiameterA = brushSizeX;
         this.sculptDiameterB = brushSizeY;
         this.sculptAttenuationFactor = brushAttenuation;
@@ -691,7 +697,7 @@ export class Swellray {
 
                     if (distance < Math.max(this.sculptDiameterA, this.sculptDiameterB)) {
                         const attenuation = this.getElipseAttenuation(distance, di, dj);
-                        const deltaHeight = this.sculptPower * attenuation;
+                        const deltaHeight = (this.brushDirection == 1 ? 1 : -1) * this.sculptPower * attenuation;
                         const initialHeight = this.sculptInitialHeights[index];
                         const currentHeight = vertices[index + 1];
                         const targetHeight = initialHeight + deltaHeight;
@@ -699,10 +705,16 @@ export class Swellray {
                         // En lugar de usar lerp, incrementamos la altura actual
                         // de forma proporcional a la atenuación. Sin embargo, limitamos el efecto de
                         // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
-                        const newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.1);
+
+                        let newHeight = initialHeight
+                        if (this.brushMode == 1){
+                        newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.01);
+                        }else if (this.brushMode == 2){
+                        newHeight = initialHeight + deltaHeight;
+                        }
                         
                         // Asegúrate de que la nueva altura no supere el incremento máximo
-                        if (newHeight - initialHeight <= this.sculptPower && newHeight <= this.maxSculptHeight * 2) {
+                        if (Math.abs(newHeight - initialHeight) <= this.sculptPower && newHeight <= this.maxSculptHeight * 2  && newHeight >= 0 ) {
                             vertices[index + 1] = newHeight;
                             this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
                         }
