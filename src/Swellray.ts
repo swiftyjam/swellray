@@ -653,7 +653,7 @@ export class Swellray {
             // Retorna una atenuación basada en una función gaussiana desde el centro hacia los extremos
             const gaussianCenter = 0;
             // Aquí introducimos sculptPower en la ecuación
-            const gaussianWidth = (1 - this.sculptAttenuationFactor) / Math.sqrt(this.sculptPower);  
+            const gaussianWidth = this.sculptAttenuationFactor * Math.sqrt(this.sculptPower);  
             return Math.exp(-Math.pow(ellipseDistance - gaussianCenter, 2) / (2 * gaussianWidth * gaussianWidth)); 
         }
     
@@ -706,6 +706,8 @@ export class Swellray {
                             vertices[index + 1] = newHeight; 
                             this.updateDisplacementTexture(ni, nj, newHeight);
                         }
+                    }else{
+                        vertices[index + 1] = this.sculptInitialHeights[index];
                     }
                 }
             }
