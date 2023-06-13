@@ -706,6 +706,8 @@ export class Swellray {
                             vertices[index + 1] = newHeight;
                             this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
                         }
+                    }else{
+                        vertices[index + 1] = this.sculptInitialHeights[index];
                     }
                 }
             }
