@@ -646,29 +646,29 @@ export class Swellray {
         const ellipseRotation = this.sculptAngle * (Math.PI / 180); // Convierte a radianes
         const a = this.sculptDiameterA;
         const b = this.sculptDiameterB;
-    
+
         // Aplica la rotación
         const cosTheta = Math.cos(ellipseRotation);
         const sinTheta = Math.sin(ellipseRotation);
         const rotatedDi = di * cosTheta - dj * sinTheta;
         const rotatedDj = di * sinTheta + dj * cosTheta;
-    
+
         const ellipseDistance = Math.sqrt((rotatedDi * rotatedDi) / (a * a) + (rotatedDj * rotatedDj) / (b * b));
-    
+
         if (ellipseDistance <= 1) {
             // Retorna una atenuación basada en una función gaussiana desde el centro hacia los extremos
             const gaussianCenter = 0;
             // Aquí introducimos sculptPower en la ecuación
-            const gaussianWidth = (1 - this.sculptAttenuationFactor) / Math.sqrt(this.sculptPower);  
-            return Math.exp(-Math.pow(ellipseDistance - gaussianCenter, 2) / (2 * gaussianWidth * gaussianWidth)); 
+            const gaussianWidth = (1 - this.sculptAttenuationFactor) / Math.sqrt(this.sculptPower);
+            return Math.exp(-Math.pow(ellipseDistance - gaussianCenter, 2) / (2 * gaussianWidth * gaussianWidth));
         }
-    
+
         return 0;
     }
-    
-    
-    
-    
+
+
+
+
     sculpt(intersect: THREE.Intersection): void {
         const size = this.floorGeometry.parameters.widthSegments;
         const vertices = this.floorGeometry.attributes.position.array;
@@ -696,29 +696,81 @@ export class Swellray {
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < Math.max(this.sculptDiameterA, this.sculptDiameterB)) {
-                        const attenuation = this.getElipseAttenuation(distance, di, dj);
-                        const deltaHeight = (this.brushDirection == 1 ? 1 : -1) * this.sculptPower * attenuation;
                         const initialHeight = this.sculptInitialHeights[index];
                         const currentHeight = vertices[index + 1];
-                        const targetHeight = initialHeight + deltaHeight;
-                        
-                        // En lugar de usar lerp, incrementamos la altura actual
-                        // de forma proporcional a la atenuación. Sin embargo, limitamos el efecto de
-                        // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
 
-                        let newHeight = initialHeight
-                        if (this.brushMode == 1){
-                        newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.01);
-                        }else if (this.brushMode == 2){
-                        newHeight = initialHeight + deltaHeight;
+                        if (this.brushMode == 3) {
+                            // Código para el pincel de suavizado
+                            let sumHeights = 0;  // No incluir la altura del vértice actual en la suma
+                            let numNeighbors = 0;  // No contar el vértice actual
+                        
+                            // Examina los vértices vecinos
+                            for (let dj2 = -1; dj2 <= 1; dj2++) {
+                                for (let di2 = -1; di2 <= 1; di2++) {
+                                    const neighborI = ni + di2;
+                                    const neighborJ = nj + dj2;
+                        
+                                    // Excluye el punto central del cálculo del promedio
+                                    if ((di2 != 0 || dj2 != 0) && neighborI >= 0 && neighborI <= size && neighborJ >= 0 && neighborJ <= size) {
+                                        const neighborIndex = (neighborJ * (size + 1) + neighborI) * 3;
+                                        sumHeights += vertices[neighborIndex + 1];
+                                        numNeighbors++;
+                                    }
+                                }
+                            }
+                        
+                            // Calcula la altura promedio de los vértices vecinos
+                            const averageHeight = sumHeights / numNeighbors;
+                        
+                            // Calcula la diferencia entre la altura promedio y la altura actual
+                            let heightDifference = averageHeight - currentHeight;
+                        
+                            // Calcula la nueva altura
+                            let newHeight = currentHeight;
+                        
+                            // Aplica la atenuación a la diferencia de altura, pero no aplica atenuación en el punto central
+                            if (distance != 0) {
+                                const attenuation = this.getElipseAttenuation(distance, di, dj);
+                                newHeight += heightDifference * attenuation;
+                            }
+                        
+                            // Asegúrate de que la nueva altura no supere el incremento máximo y no sea menor que cero
+                            newHeight = Math.min(Math.max(newHeight, 0), this.maxSculptHeight * 2);
+                        
+                            // Asegúrate de que la diferencia entre la nueva altura y la altura inicial no supere la fuerza del pincel
+                            if (di != 0 || dj != 0) {
+                            if (Math.abs(newHeight - initialHeight) <= this.sculptPower) {
+                                vertices[index + 1] = newHeight;
+                                this.updateDisplacementTexture(i, j, vertices[index + 1]);
+                            }
+                        }
                         }
                         
-                        // Asegúrate de que la nueva altura no supere el incremento máximo
-                        if (Math.abs(newHeight - initialHeight) <= this.sculptPower && newHeight <= this.maxSculptHeight * 2  && newHeight >= 0 ) {
-                            vertices[index + 1] = newHeight;
-                            this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
+                        
+                        
+                        else {
+                            const attenuation = this.getElipseAttenuation(distance, di, dj);
+                            const deltaHeight = (this.brushDirection == 1 ? 1 : -1) * this.sculptPower * attenuation;
+                            const targetHeight = initialHeight + deltaHeight;
+
+                            // En lugar de usar lerp, incrementamos la altura actual
+                            // de forma proporcional a la atenuación. Sin embargo, limitamos el efecto de
+                            // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
+
+                            let newHeight = initialHeight
+                            if (this.brushMode == 1) {
+                                newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.01);
+                            } else if (this.brushMode == 2) {
+                                newHeight = initialHeight + deltaHeight;
+                            }
+
+                            // Asegúrate de que la nueva altura no supere el incremento máximo
+                            if (Math.abs(newHeight - initialHeight) <= this.sculptPower && newHeight <= this.maxSculptHeight * 2 && newHeight >= 0) {
+                                vertices[index + 1] = newHeight;
+                                this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
+                            }
                         }
-                    }else{
+                    } else {
                         vertices[index + 1] = this.sculptInitialHeights[index];
                     }
                 }
