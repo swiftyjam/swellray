@@ -50,8 +50,8 @@ export class Swellray {
     sculptPower: number
     sculptAttenuationFactor: number
     maxSculptHeight: number
-    bathymetryMap: Texture
-    energyMap: Texture
+    bathymetryMap: DataTexture
+    energyMap: DataTexture
     seaMap: Texture
     chopMap: Texture
     seaMaterial: ShaderMaterial
@@ -86,8 +86,7 @@ export class Swellray {
     readonly G = 9.81
 
     // the max scale of the dot distributed in the heihgt of the grid
-    constructor(container: HTMLElement, bathymetryMapImage: string, chopMapImage: string) {
-        this.setBathymetry(bathymetryMapImage);
+    constructor(container: HTMLElement, chopMapImage: string) {
         this.loadChop(chopMapImage);
         this.container = container;
     }
@@ -148,6 +147,7 @@ export class Swellray {
         this.initControls();
 
         this.buildSea();
+        this.buildFloor(null);
         this.buildLegends();
         this.setBrush(0, 0, 0, 0, 1);
 
@@ -482,21 +482,24 @@ export class Swellray {
         this.scene.add(this.sculptAreaPointer);
     }
 
-    updateDisplacementTexture(i: number, j: number, height: number): void {
-        const size = this.bathymetryMap.image.width;
-        const index = (j * size + i) * 4;
+   updateDisplacementTexture(i: number, j: number, height: number): void {
+    const size = this.bathymetryMap.image.width;
+    const index = (j * size + i) * 4;
 
-        const normalizedHeight = height / this.maxSculptHeight;
+    const normalizedHeight = height / this.maxSculptHeight;
+    if (normalizedHeight < 1.) {  // Submerged
         this.bathymetryMap.image.data[index] = normalizedHeight;
-        this.bathymetryMap.image.data[index + 1] = normalizedHeight;
-        this.bathymetryMap.image.data[index + 2] = normalizedHeight;
-        this.bathymetryMap.image.data[index + 3] = 1;
-        // Indicates that the texture needs to be updated
-        this.bathymetryMap.needsUpdate = true;
-
-
+        this.bathymetryMap.image.data[index + 1] = 0.;
+        this.bathymetryMap.image.data[index + 2] = normalizedHeight;  // Reset blue channel
+    } else {  // Above water       
+        this.bathymetryMap.image.data[index] = 1.;  // Reset red and green channels
+        this.bathymetryMap.image.data[index + 1] = normalizedHeight - 1.;
+        this.bathymetryMap.image.data[index + 2] = 1.;
     }
-
+    this.bathymetryMap.image.data[index + 3] = 1.;
+    // Indicates that the texture needs to be updated
+    this.bathymetryMap.needsUpdate = true;
+}
     updateEnergyMap(): void {
         // El tamaño de la imagen del mapa
         const size = this.bathymetryMap.image.width;
@@ -521,8 +524,7 @@ export class Swellray {
             for (let i = 0; i < size; i++) {
                 // Calculamos el índice correspondiente a la posición (x, y)
                 const index = (j * size + i) * 4;
-                const normalizedHeight = bathymetryData[index];
-
+                const normalizedHeight = bathymetryData[index+1] == 0 ? bathymetryData[index] : 1. + bathymetryData[index+1];
                 // Si el píxel actual representa un montículo, incrementamos la fricción
                 let friction = 0;
                 if (normalizedHeight > 0.9) {
@@ -610,32 +612,32 @@ export class Swellray {
         });
     }
 
-    saveTextureAsPNG(texture, fileName) {
-        // Create a canvas to render the texture
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        saveTextureAsPNG(texture, fileName) {
+            // Create a canvas to render the texture
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
 
-        // Set canvas size to match the texture
-        canvas.width = texture.image.width;
-        canvas.height = texture.image.height;
+            // Set canvas size to match the texture
+            canvas.width = texture.image.width;
+            canvas.height = texture.image.height;
 
-        // Create an ImageData object to store the texture data
-        const imageData = context.createImageData(canvas.width, canvas.height);
+            // Create an ImageData object to store the texture data
+            const imageData = context.createImageData(canvas.width, canvas.height);
 
-        // Copy the texture data to the ImageData object
-        for (let i = 0; i < texture.image.data.length; i++) {
-            imageData.data[i] = texture.image.data[i] * 255;
+            // Copy the texture data to the ImageData object
+            for (let i = 0; i < texture.image.data.length; i++) {
+                imageData.data[i] = texture.image.data[i] * 255;
+            }
+
+            // Put the ImageData object into the canvas
+            context.putImageData(imageData, 0, 0);
+
+            // Create a link element to download the image
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = fileName;
+            link.click();
         }
-
-        // Put the ImageData object into the canvas
-        context.putImageData(imageData, 0, 0);
-
-        // Create a link element to download the image
-        const link = document.createElement('a');
-        link.href = canvas.toDataURL('image/png');
-        link.download = fileName;
-        link.click();
-    }
 
     // Usage:
 
@@ -819,30 +821,72 @@ export class Swellray {
         return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
     }
 
-    async setBathymetry(bathymetryMapImage: string) {
-        this.scene.remove(this.floorPlane);
-        const img = this.createEmptyMapLayer(this.AMOUNTX);
-        this.buildFloor(img)
-
-    }
-    async loadBathymetry(bathymetryMapImage: string) {
-        const loader1 = new THREE.TextureLoader();
-        // load a image resource
-        await loader1.loadAsync(bathymetryMapImage).then(image => {
-            this.buildFloor(image)
-        })
-
-    }
-    buildFloor(img: Texture) {
-        this.bathymetryMap = img
+    async loadImageToDataTexture(dataurl : string) {
+       
+       const image = new Image()
+       image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+  
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+  
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const normalizedData = Float32Array.from(imageData, val => val / 255);
+        const dataTexture = new THREE.DataTexture(
+            normalizedData,
+            canvas.width,
+            canvas.height,
+            THREE.RGBAFormat,
+            THREE.FloatType
+        );
+  
+        dataTexture.needsUpdate = true;
+        console.log(dataTexture);
+        this.buildFloor(dataTexture)
+        
+      };
+  
+      image.src = dataurl;
+    
+      }
+      
+    buildFloor(img: THREE.DataTexture) {
+        
+        this.scene.remove(this.floorPlane)
+        this.bathymetryMap = img == null ? this.createEmptyMapLayer(this.AMOUNTX) : img
         this.energyMap = this.createEmptyMapLayer(this.AMOUNTX);
         this.seaMaterial.uniforms.uDepthmap.value = this.bathymetryMap;
         this.seaMaterial.uniforms.uEnergymap.value = this.energyMap;
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
         this.sculptInitialHeights = new Float32Array(this.floorGeometry.attributes.position.array.length)
         this.floorGeometry.rotateX(-Math.PI / 2)
-        //const seaFloor_geometry = new THREE.PlaneGeometry(256, 256, 256, 256);
+       
+        if(img!==null){
+        // Update vertices based on bathymetryMap
+        const size = this.bathymetryMap.image.width;
+        const vertices = this.floorGeometry.getAttribute('position').array;
+    console.log(this.bathymetryMap.image.data);
+    
+        for (let i = 0; i <= size; i++) {
+            for (let j = 0; j <= size; j++) {
+                const index = (j * (size) + i) * 3;
+                const textureIndex = (j * size + i) * 4;
 
+                // Recover the height from the texture
+                let height=0.0000000000;
+                if (this.bathymetryMap.image.data[textureIndex + 1] > 0) { // Above water
+                    height = (this.bathymetryMap.image.data[textureIndex + 1] + 1) * this.maxSculptHeight;
+                } else { // Submerged
+                     height = this.bathymetryMap.image.data[textureIndex] * this.maxSculptHeight;
+                }
+                vertices[index + 1] = height;
+            }
+        }
+    }
+        // Update the vertices in the geometry
+        this.floorGeometry.getAttribute('position').needsUpdate = true;
         const seaFloor_material = new THREE.ShaderMaterial({
             uniforms: {
                 uScale: {
@@ -866,6 +910,7 @@ export class Swellray {
         this.floorPlane.position.setY(this.floorPosition)
         this.scene.add(this.floorPlane)
     }
+    
     async loadChop(chopMapImage: string) {
         const loader2 = new THREE.TextureLoader();
         await loader2.loadAsync(chopMapImage).then(image => {
@@ -921,7 +966,6 @@ export class Swellray {
     }
     onPointerDown(e) {
         // Cuando comienzas a arrastrar el ratón
-        console.log('what');
 
         this.isPointerDown = true;
         if (this.sculptMode) {
