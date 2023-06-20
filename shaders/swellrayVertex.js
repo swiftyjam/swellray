@@ -27,9 +27,15 @@ const vertex = `
     vec3 gerstnerWave(vec4 wave,vec3 p,inout float windDisplace,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
        
+        vec4 baseValue = (texture2D(uDepthmap, vec2(1.- vUv.y,1.- vUv.x)));
+
+        if(baseValue.y == 0.){
+        vDepth=(1.- baseValue.x) * uDepthScale;
+        }else{
+        vDepth=(baseValue.y) * uDepthScale;
+        }  
         
-        vDepth=(1.-(texture2D(uDepthmap, vec2(1.- vUv.y,1.- vUv.x)).x)) * uDepthScale;
-        vEnergyAtt=((texture2D(uEnergymap, vec2(1.- vUv.y,1.- vUv.x)).x));
+        vEnergyAtt=((texture2D(uEnergymap, vec2(1.- vUv.y,1.- vUv.x)).y));
         float period= wave.z;
         float height= wave.w;
         float w = 2.*PI / period ; 
