@@ -68,7 +68,7 @@ const vertex = `
         //No need of this anymore ;)
         // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy)+ windDisplace;
 
-         float a =  (steepness/k) + windDisplace;
+         float a = 2. * (steepness/k) + windDisplace;
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),

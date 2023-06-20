@@ -6,7 +6,8 @@
             "lowSeaColor": "2260e8",
             "highSeaColor": "1E58A7",
             "backgroundColor": "020617",
-            "sculptPointerColor": "ffffff"
+            "sculptPointerColor": "ffffff",
+            "sculptSharpColor": "ff0000"
         }
     }
 }

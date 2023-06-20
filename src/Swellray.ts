@@ -22,6 +22,7 @@ export class Swellray {
     sculptInterval: number
     sculptPointer: Mesh
     sculptAreaPointer: THREE.Line
+    sculptSharpPointer: THREE.Line
     sculptInitialHeights: Float32Array
     pointer: Vector3
     upperRuler: Group
@@ -413,6 +414,7 @@ export class Swellray {
     toggleSculptMode(value) {
         this.sculptMode = value
         this.sculptAreaPointer.visible = value
+        this.sculptSharpPointer.visible = value
         this.controls.enabled = !value
     }
 
@@ -441,6 +443,8 @@ export class Swellray {
 
         if (this.sculptAreaPointer !== "undefined")
             this.sculptAreaPointer.position.copy(this.sculptPointer.position)
+            if (this.sculptSharpPointer !== "undefined")
+            this.sculptSharpPointer.position.copy(this.sculptPointer.position)
 
     }
 
@@ -458,10 +462,10 @@ export class Swellray {
         if (this.sculptAreaPointer !== "undefined") {
             this.scene.remove(this.sculptAreaPointer);
         }
-        const a = this.sculptDiameterA / 2;
-        const b = this.sculptDiameterB / 2;
-        const angle = this.sculptAngle * Math.PI / 180 // Puedes ajustar este valor para controlar la relación de aspecto de la elipse
-        const ellipseCurve = new THREE.EllipseCurve(
+        let a = this.sculptDiameterA / 2;
+        let b = this.sculptDiameterB / 2;
+        let angle = this.sculptAngle * Math.PI / 180 // Puedes ajustar este valor para controlar la relación de aspecto de la elipse
+        let ellipseCurve = new THREE.EllipseCurve(
             0,
             0,
             a,
@@ -472,14 +476,39 @@ export class Swellray {
             0
         );
 
-        const ellipsePoints = ellipseCurve.getPoints(50);
-        const ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+        let ellipsePoints = ellipseCurve.getPoints(50);
+        let ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
 
-        const ellipseMaterial = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptPointerColor });
+        let ellipseMaterial = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptPointerColor });
         this.sculptAreaPointer = new THREE.Line(ellipseGeometry, ellipseMaterial);
         this.sculptAreaPointer.rotateX(Math.PI / 2)
         this.sculptAreaPointer.rotateZ(-angle)
         this.scene.add(this.sculptAreaPointer);
+        
+        if (this.sculptSharpPointer !== "undefined") {
+            this.scene.remove(this.sculptSharpPointer);
+        }
+         a = (1 - this.sculptAttenuationFactor)*this.sculptDiameterA / 2;
+         b =(1 - this.sculptAttenuationFactor)* this.sculptDiameterB / 2;
+         ellipseCurve = new THREE.EllipseCurve(
+            0,
+            0,
+            a,
+            b,
+            0,
+            2 * Math.PI,
+            false,
+            0
+        );
+
+         ellipsePoints = ellipseCurve.getPoints(50);
+         ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+         let ellipseMaterial2 = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptSharpColor });
+
+        this.sculptSharpPointer = new THREE.Line(ellipseGeometry, ellipseMaterial2);
+        this.sculptSharpPointer.rotateX(Math.PI / 2)
+        this.sculptSharpPointer.rotateZ(-angle)
+        this.scene.add(this.sculptSharpPointer);
     }
 
    updateDisplacementTexture(i: number, j: number, height: number): void {
@@ -514,7 +543,7 @@ export class Swellray {
 
         // Factores para el incremento de la fricción y su reducción
         const frictionIncreaseFactor = 1.;
-        const globalFrictionDecayFactor = .985;  // Decay factor ajustado para que sea menor que 1
+        const globalFrictionDecayFactor = .995;  // Decay factor ajustado para que sea menor que 1
 
         // Crear un nuevo mapa de fricción
         const newFrictionMap = new Float32Array(size * size);
@@ -968,15 +997,7 @@ export class Swellray {
         // Cuando comienzas a arrastrar el ratón
 
         this.isPointerDown = true;
-        if (this.sculptMode) {
-            //  // Registra la altura inicial de cada vértice
-            //     const vertices = this.floorGeometry.attributes.position.array;
-            //     for (let i = 0; i < vertices.length; i += 3) {
-            //         this.sculptInitialHeights[i] = vertices[i + 1];
-            //     }
-            // console.log(this.sculptInitialHeights);
-
-        }
+   
 
     }
     onWindowResize() {
