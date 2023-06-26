@@ -24,7 +24,7 @@ const vertex = `
     varying float vHeightDepthRatio;
     varying float vDisplacementY;
 
-    vec3 gerstnerWave(vec4 wave,vec3 p,inout float windDisplace,inout vec3 tangent,inout vec3 binormal){
+    vec3 gerstnerWave(vec4 wave,vec3 p,inout vec3 tangent,inout vec3 binormal){
         vUv=uv;
        
         vec4 baseValue = (texture2D(uDepthmap, vec2(1.- vUv.y,1.- vUv.x)));
@@ -54,21 +54,18 @@ const vertex = `
             calculatedWavelength = sqrt(G*vDepth*period);
         }
     
-        float steepness = (height / calculatedWavelength) * vEnergyAtt;
-        float windSteepness = windDisplace  ;
-        steepness += windSteepness;
-        
-           
-        float k = w / calculatedSpeed;
-        
-        float c = calculatedSpeed;
-        vec2 d = normalize(vec2(wave.x,-wave.y) + (vWindDirection * windDisplace));
-        float f = k*(dot(d,p.xz)-c*uTime);
-        
-        //No need of this anymore ;)
-        // float a = (steepness/k) * length(uSpotOrientation.xy + d.xy)+ windDisplace;
 
-         float a = 2. * (steepness/k) + windDisplace;
+        
+        
+        float k = w / calculatedSpeed;
+        float c = calculatedSpeed;
+        vec2 d = normalize(vec2(wave.x,-wave.y));
+        
+        float steepness = (height / calculatedWavelength) * vEnergyAtt ;
+        
+        float f = k*(dot(d,p.xz)-c*uTime);
+        float a = 2. * (steepness/k);
+        
         tangent+=vec3(
             -d.x*d.x*(a*sin(f)),
             d.x*(a*cos(f)),
@@ -80,12 +77,10 @@ const vertex = `
             -d.y*d.y*(a*sin(f))
         );
         
-
-        // float vertical = min(a*cos(f), vDepth );
-        //float vertical = a*cos(f);
-        float vertical = min(a*cos(f), vDepth - 1. * uScale  );
+        float vertical = min(a*cos(f), vDepth - .5 * uScale  );
         vertical = vertical;
         vSteepness += (-vertical) / calculatedWavelength ;
+
         return vec3(
             d.x*(a*sin(f)),
             vertical,
@@ -97,20 +92,13 @@ const vertex = `
     void main(){
         vec3 tangent=vec3(1.,0.,0.);
         vec3 binormal=vec3(0.,0.,1.);
-  
         vec3 p=vec3(position.xyz);
       
-     
-    
-        float windWaveHeight = (.27 * pow(uWindSpeed,2.))/G * length(uSpotOrientation.xy + uWindDirection.xy)/6.;
-        vWindDirection = vec2(uWindDirection.x,-uWindDirection.y);
-        float windDisplace = (texture2D(uNoiseMap, uv  ).r * windWaveHeight * uScale )  ;
-    
         float wcount=0.;
         for(int i=0;i<uWaves.length();i++){
             vec4 wave=uWaves[i];
             if(wave.w>0.){
-                p+=gerstnerWave(wave,position,windDisplace,tangent,binormal);
+                p += gerstnerWave(wave,position,tangent,binormal);
                 wcount++;
             }
         }

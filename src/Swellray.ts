@@ -443,8 +443,8 @@ export class Swellray {
 
         if (this.sculptAreaPointer !== "undefined")
             this.sculptAreaPointer.position.copy(this.sculptPointer.position)
-            if (this.sculptSharpPointer !== "undefined")
-            this.sculptSharpPointer.position.copy(this.sculptPointer.position)
+        if (this.sculptSharpPointer !== "undefined")
+            this.sculptSharpPointer.position.set(this.sculptPointer.position.x, this.sculptPointer.position.y + this.sculptPower, this.sculptPointer.position.z)
 
     }
 
@@ -484,13 +484,13 @@ export class Swellray {
         this.sculptAreaPointer.rotateX(Math.PI / 2)
         this.sculptAreaPointer.rotateZ(-angle)
         this.scene.add(this.sculptAreaPointer);
-        
+
         if (this.sculptSharpPointer !== "undefined") {
             this.scene.remove(this.sculptSharpPointer);
         }
-         a = (1 - this.sculptAttenuationFactor)*this.sculptDiameterA / 2;
-         b =(1 - this.sculptAttenuationFactor)* this.sculptDiameterB / 2;
-         ellipseCurve = new THREE.EllipseCurve(
+        a = (1 - this.sculptAttenuationFactor) * this.sculptDiameterA / 2;
+        b = (1 - this.sculptAttenuationFactor) * this.sculptDiameterB / 2;
+        ellipseCurve = new THREE.EllipseCurve(
             0,
             0,
             a,
@@ -501,9 +501,9 @@ export class Swellray {
             0
         );
 
-         ellipsePoints = ellipseCurve.getPoints(50);
-         ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
-         let ellipseMaterial2 = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptSharpColor });
+        ellipsePoints = ellipseCurve.getPoints(50);
+        ellipseGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+        let ellipseMaterial2 = new THREE.LineBasicMaterial({ color: this.theme.props.colors.sculptSharpColor });
 
         this.sculptSharpPointer = new THREE.Line(ellipseGeometry, ellipseMaterial2);
         this.sculptSharpPointer.rotateX(Math.PI / 2)
@@ -511,24 +511,24 @@ export class Swellray {
         this.scene.add(this.sculptSharpPointer);
     }
 
-   updateDisplacementTexture(i: number, j: number, height: number): void {
-    const size = this.bathymetryMap.image.width;
-    const index = (j * size + i) * 4;
+    updateDisplacementTexture(i: number, j: number, height: number): void {
+        const size = this.bathymetryMap.image.width;
+        const index = (j * size + i) * 4;
 
-    const normalizedHeight = height / this.maxSculptHeight;
-    if (normalizedHeight < 1.) {  // Submerged
-        this.bathymetryMap.image.data[index] = normalizedHeight;
-        this.bathymetryMap.image.data[index + 1] = 0.;
-        this.bathymetryMap.image.data[index + 2] = normalizedHeight;  // Reset blue channel
-    } else {  // Above water       
-        this.bathymetryMap.image.data[index] = 1.;  // Reset red and green channels
-        this.bathymetryMap.image.data[index + 1] = normalizedHeight - 1.;
-        this.bathymetryMap.image.data[index + 2] = 1.;
+        const normalizedHeight = height / this.maxSculptHeight;
+        if (normalizedHeight < 1.) {  // Submerged
+            this.bathymetryMap.image.data[index] = normalizedHeight;
+            this.bathymetryMap.image.data[index + 1] = 0.;
+            this.bathymetryMap.image.data[index + 2] = normalizedHeight;  // Reset blue channel
+        } else {  // Above water       
+            this.bathymetryMap.image.data[index] = 1.;  // Reset red and green channels
+            this.bathymetryMap.image.data[index + 1] = normalizedHeight - 1.;
+            this.bathymetryMap.image.data[index + 2] = 1.;
+        }
+        this.bathymetryMap.image.data[index + 3] = 1.;
+        // Indicates that the texture needs to be updated
+        this.bathymetryMap.needsUpdate = true;
     }
-    this.bathymetryMap.image.data[index + 3] = 1.;
-    // Indicates that the texture needs to be updated
-    this.bathymetryMap.needsUpdate = true;
-}
     updateEnergyMap(): void {
         // El tamaño de la imagen del mapa
         const size = this.bathymetryMap.image.width;
@@ -553,7 +553,7 @@ export class Swellray {
             for (let i = 0; i < size; i++) {
                 // Calculamos el índice correspondiente a la posición (x, y)
                 const index = (j * size + i) * 4;
-                const normalizedHeight = bathymetryData[index+1] == 0 ? bathymetryData[index] : 1. + bathymetryData[index+1];
+                const normalizedHeight = bathymetryData[index + 1] == 0 ? bathymetryData[index] : 1. + bathymetryData[index + 1];
                 // Si el píxel actual representa un montículo, incrementamos la fricción
                 let friction = 0;
                 if (normalizedHeight > 0.9) {
@@ -641,32 +641,32 @@ export class Swellray {
         });
     }
 
-        saveTextureAsPNG(texture, fileName) {
-            // Create a canvas to render the texture
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
+    saveTextureAsPNG(texture, fileName) {
+        // Create a canvas to render the texture
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
 
-            // Set canvas size to match the texture
-            canvas.width = texture.image.width;
-            canvas.height = texture.image.height;
+        // Set canvas size to match the texture
+        canvas.width = texture.image.width;
+        canvas.height = texture.image.height;
 
-            // Create an ImageData object to store the texture data
-            const imageData = context.createImageData(canvas.width, canvas.height);
+        // Create an ImageData object to store the texture data
+        const imageData = context.createImageData(canvas.width, canvas.height);
 
-            // Copy the texture data to the ImageData object
-            for (let i = 0; i < texture.image.data.length; i++) {
-                imageData.data[i] = texture.image.data[i] * 255;
-            }
-
-            // Put the ImageData object into the canvas
-            context.putImageData(imageData, 0, 0);
-
-            // Create a link element to download the image
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
-            link.download = fileName;
-            link.click();
+        // Copy the texture data to the ImageData object
+        for (let i = 0; i < texture.image.data.length; i++) {
+            imageData.data[i] = texture.image.data[i] * 255;
         }
+
+        // Put the ImageData object into the canvas
+        context.putImageData(imageData, 0, 0);
+
+        // Create a link element to download the image
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = fileName;
+        link.click();
+    }
 
     // Usage:
 
@@ -730,40 +730,40 @@ export class Swellray {
                         const initialHeight = this.sculptInitialHeights[index];
                         const currentHeight = vertices[index + 1];
 
-                            if (this.brushMode == 3) {
-                                // Código para el pincel de suavizado
-                                let sumHeights = 0;  // No incluir la altura del vértice actual en la suma
-                                let numNeighbors = 0;  // No contar el vértice actual
+                        if (this.brushMode == 3) {
+                            // Código para el pincel de suavizado
+                            let sumHeights = 0;  // No incluir la altura del vértice actual en la suma
+                            let numNeighbors = 0;  // No contar el vértice actual
 
-                                // Examina los vértices vecinos
-                                for (let dj2 = -1; dj2 <= 1; dj2++) {
-                                    for (let di2 = -1; di2 <= 1; di2++) {
-                                        const neighborI = ni + di2;
-                                        const neighborJ = nj + dj2;
-                                        const neighborIndex = (neighborJ * (size + 1) + neighborI) * 3;
-                                        sumHeights += vertices[neighborIndex + 1];
-                                        numNeighbors++;
-                                    }
+                            // Examina los vértices vecinos
+                            for (let dj2 = -1; dj2 <= 1; dj2++) {
+                                for (let di2 = -1; di2 <= 1; di2++) {
+                                    const neighborI = ni + di2;
+                                    const neighborJ = nj + dj2;
+                                    const neighborIndex = (neighborJ * (size + 1) + neighborI) * 3;
+                                    sumHeights += vertices[neighborIndex + 1];
+                                    numNeighbors++;
                                 }
-
-                                // Calcula la altura promedio de los vértices vecinos
-                                const averageHeight = sumHeights / numNeighbors;
-
-                                // Calcula la diferencia entre la altura promedio y la altura actual
-                                let heightDifference = averageHeight - currentHeight;
-
-
-                                // Aplica la atenuación a la diferencia de altura, pero no aplica atenuación en el punto central
-
-                                const attenuation = this.getElipseAttenuation(distance, di, dj);
-                                let newHeight = currentHeight + heightDifference * attenuation;
-
-                                if (Math.abs(newHeight - initialHeight) <= this.sculptPower && newHeight <= this.maxSculptHeight * 2 && newHeight >= 0) {
-                                    vertices[index + 1] = newHeight;
-                                    this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
-                                }
-
                             }
+
+                            // Calcula la altura promedio de los vértices vecinos
+                            const averageHeight = sumHeights / numNeighbors;
+
+                            // Calcula la diferencia entre la altura promedio y la altura actual
+                            let heightDifference = averageHeight - currentHeight;
+
+
+                            // Aplica la atenuación a la diferencia de altura, pero no aplica atenuación en el punto central
+
+                            const attenuation = this.getElipseAttenuation(distance, di, dj);
+                            let newHeight = currentHeight + heightDifference * attenuation;
+
+                            if (Math.abs(newHeight - initialHeight) <= this.sculptPower && newHeight <= this.maxSculptHeight * 2 && newHeight >= 0) {
+                                vertices[index + 1] = newHeight;
+                                this.updateDisplacementTexture(ni, nj, vertices[index + 1]);
+                            }
+
+                        }
 
 
 
@@ -850,39 +850,39 @@ export class Swellray {
         return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
     }
 
-    async loadImageToDataTexture(dataurl : string) {
-       
-       const image = new Image()
-       image.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-  
-        const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0);
-  
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
-        const normalizedData = Float32Array.from(imageData, val => val / 255);
-        const dataTexture = new THREE.DataTexture(
-            normalizedData,
-            canvas.width,
-            canvas.height,
-            THREE.RGBAFormat,
-            THREE.FloatType
-        );
-  
-        dataTexture.needsUpdate = true;
-        console.log(dataTexture);
-        this.buildFloor(dataTexture)
-        
-      };
-  
-      image.src = dataurl;
-    
-      }
-      
+    async loadImageToDataTexture(dataurl: string) {
+
+        const image = new Image()
+        image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            const normalizedData = Float32Array.from(imageData, val => val / 255);
+            const dataTexture = new THREE.DataTexture(
+                normalizedData,
+                canvas.width,
+                canvas.height,
+                THREE.RGBAFormat,
+                THREE.FloatType
+            );
+
+            dataTexture.needsUpdate = true;
+            console.log(dataTexture);
+            this.buildFloor(dataTexture)
+
+        };
+
+        image.src = dataurl;
+
+    }
+
     buildFloor(img: THREE.DataTexture) {
-        
+
         this.scene.remove(this.floorPlane)
         this.bathymetryMap = img == null ? this.createEmptyMapLayer(this.AMOUNTX) : img
         this.energyMap = this.createEmptyMapLayer(this.AMOUNTX);
@@ -891,29 +891,29 @@ export class Swellray {
         this.floorGeometry = new THREE.PlaneGeometry(this.AMOUNTX * this.seaSpreadScale, this.AMOUNTZ * this.seaSpreadScale, this.AMOUNTX - 1, this.AMOUNTZ - 1);
         this.sculptInitialHeights = new Float32Array(this.floorGeometry.attributes.position.array.length)
         this.floorGeometry.rotateX(-Math.PI / 2)
-       
-        if(img!==null){
-        // Update vertices based on bathymetryMap
-        const size = this.bathymetryMap.image.width;
-        const vertices = this.floorGeometry.getAttribute('position').array;
-    console.log(this.bathymetryMap.image.data);
-    
-        for (let i = 0; i <= size; i++) {
-            for (let j = 0; j <= size; j++) {
-                const index = (j * (size) + i) * 3;
-                const textureIndex = (j * size + i) * 4;
 
-                // Recover the height from the texture
-                let height=0.0000000000;
-                if (this.bathymetryMap.image.data[textureIndex + 1] > 0) { // Above water
-                    height = (this.bathymetryMap.image.data[textureIndex + 1] + 1) * this.maxSculptHeight;
-                } else { // Submerged
-                     height = this.bathymetryMap.image.data[textureIndex] * this.maxSculptHeight;
+        if (img !== null) {
+            // Update vertices based on bathymetryMap
+            const size = this.bathymetryMap.image.width;
+            const vertices = this.floorGeometry.getAttribute('position').array;
+            console.log(this.bathymetryMap.image.data);
+
+            for (let i = 0; i <= size; i++) {
+                for (let j = 0; j <= size; j++) {
+                    const index = (j * (size) + i) * 3;
+                    const textureIndex = (j * size + i) * 4;
+
+                    // Recover the height from the texture
+                    let height = 0.0000000000;
+                    if (this.bathymetryMap.image.data[textureIndex + 1] > 0) { // Above water
+                        height = (this.bathymetryMap.image.data[textureIndex + 1] + 1) * this.maxSculptHeight;
+                    } else { // Submerged
+                        height = this.bathymetryMap.image.data[textureIndex] * this.maxSculptHeight;
+                    }
+                    vertices[index + 1] = height;
                 }
-                vertices[index + 1] = height;
             }
         }
-    }
         // Update the vertices in the geometry
         this.floorGeometry.getAttribute('position').needsUpdate = true;
         const seaFloor_material = new THREE.ShaderMaterial({
@@ -939,7 +939,7 @@ export class Swellray {
         this.floorPlane.position.setY(this.floorPosition)
         this.scene.add(this.floorPlane)
     }
-    
+
     async loadChop(chopMapImage: string) {
         const loader2 = new THREE.TextureLoader();
         await loader2.loadAsync(chopMapImage).then(image => {
@@ -997,7 +997,7 @@ export class Swellray {
         // Cuando comienzas a arrastrar el ratón
 
         this.isPointerDown = true;
-   
+
 
     }
     onWindowResize() {
