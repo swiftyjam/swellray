@@ -160,20 +160,18 @@ export class Swellray {
         window.addEventListener("mouseup", this.onPointerUp.bind(this));
         window.addEventListener('keyup', (event) => {
             if (event.key === 'd' || event.key === 'D') {
-                this.saveTextureAsPNG(this.bathymetryMap, 'bathymetryMap.png');
-                this.saveTextureAsPNG(this.energyMap, 'energyMap.png');
+               this.exportDisplacementMap()
+                // this.saveTextureAsPNG(this.energyMap, 'energyMap.png');
             }
-            if (event.key === 'k' || event.key === 'K') {
-                this.updateEnergyMap()
-            }
-
         });
 
         this.update();
+        this.updateEnergyMap()
         this.onWindowResize();
 
 
     }
+
 
     buildSea() {
         const positions = new Float32Array(this.CENTERS_NUMBER * 3);
@@ -601,43 +599,42 @@ export class Swellray {
 
 
     drawMaps(): void {
-        // Creamos el canvas si aún no se ha creado
-        if (!this.debugCanvas) {
-            this.debugCanvas = document.createElement('canvas');
-            this.debugCanvas.style.position = 'absolute';
-            this.debugCanvas.style.pointerEvents = 'none';
-            this.debugCanvas.width = this.renderer.domElement.width;
-            this.debugCanvas.height = this.renderer.domElement.height;
-            this.renderer.domElement.parentElement.appendChild(this.debugCanvas);
-        }
-
-        // Obtenemos el contexto del canvas
-        const context = this.debugCanvas.getContext('2d');
-
-        // Dibujamos cada textura en la esquina inferior derecha
+        // Obtenemos el div en el que queremos colocar las imágenes
+        const container = document.getElementById('map-preview');
+        if (!container) return; // Si el div no existe, no hacemos nada
+    
         [this.bathymetryMap, this.energyMap].forEach((texture, index) => {
             // Creamos un canvas temporal para renderizar la textura
             const canvas = document.createElement('canvas');
             const tempContext = canvas.getContext('2d');
-
+    
             // Ajustamos el tamaño del canvas para que coincida con la textura
             canvas.width = texture.image.width;
             canvas.height = texture.image.height;
-
+    
             // Creamos un objeto ImageData para almacenar los datos de la textura
             const imageData = tempContext.createImageData(canvas.width, canvas.height);
-
+    
             // Copiamos los datos de la textura al objeto ImageData
             for (let i = 0; i < texture.image.data.length; i++) {
                 imageData.data[i] = texture.image.data[i] * 255;
             }
-
+    
             // Colocamos el objeto ImageData en el canvas temporal
             tempContext.putImageData(imageData, 0, 0);
-
-            // Dibujamos el canvas temporal en el canvas principal
-            const offset = index * 256;
-            context.drawImage(canvas, this.debugCanvas.width - canvas.width - offset, this.debugCanvas.height - canvas.height);
+    
+            // Comprobamos si ya existe una imagen en el div para esta textura
+            let img = container.querySelector(`img[data-texture-index="${index}"]`);
+    
+            // Si la imagen no existe, la creamos
+            if (!img) {
+                img = document.createElement('img');
+                img.dataset.textureIndex = index.toString(); // Usamos un atributo data- para identificar la imagen
+                container.appendChild(img);
+            }
+    
+            // Actualizamos el src de la imagen con el contenido del canvas
+            img.src = canvas.toDataURL();
         });
     }
 
@@ -938,6 +935,7 @@ export class Swellray {
         this.floorPlane = new THREE.Mesh(this.floorGeometry, seaFloor_material);
         this.floorPlane.position.setY(this.floorPosition)
         this.scene.add(this.floorPlane)
+        this.updateEnergyMap()
     }
 
     async loadChop(chopMapImage: string) {
@@ -1145,28 +1143,7 @@ export class Swellray {
         this.renderer.render(this.scene, this.camera);
     }
     exportDisplacementMap(): void {
-        const size: number = this.bathymetryMap.image.width;
-        const data: Uint8Array = new Uint8Array(this.bathymetryMap.image.data.buffer);
-        const canvas: HTMLCanvasElement = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const context: CanvasRenderingContext2D = canvas.getContext("2d");
-        const imageData: ImageData = context.createImageData(size, size);
-
-        for (let i = 0; i < data.length; i += 4) {
-            const value: number = Math.floor(data[i] * 255);
-            imageData.data[i] = value;
-            imageData.data[i + 1] = value;
-            imageData.data[i + 2] = value;
-            imageData.data[i + 3] = 255;
-        }
-
-        context.putImageData(imageData, 0, 0);
-
-        const a: HTMLAnchorElement = document.createElement("a");
-        a.href = canvas.toDataURL("image/png");
-        a.download = "displacement_map.png";
-        a.click();
+        this.saveTextureAsPNG(this.bathymetryMap, 'bathymetryMap.png');
     }
 
 }
