@@ -43,8 +43,8 @@ export class Swellray {
     delta: number
     fps: number
     waves: Array<TorochoidalWave>
-    brushDirection: number
-    brushMode: number
+    sculptForce: number
+    sculptMode: number
     sculptDiameterA: number
     sculptDiameterB: number
     sculptAngle: number
@@ -75,7 +75,7 @@ export class Swellray {
     sculptor: Sculptor
 
     mode: Array<string>
-    sculptMode: string
+    switchSculpt: string
     isPointerDown: boolean
 
     debugCanvas: HTMLCanvasElement
@@ -98,7 +98,7 @@ export class Swellray {
             directions: []
         }
         this.mode = ['preset', 'sculpt'];
-        this.sculptMode = false;
+        this.switchSculpt = false;
 
         this.theme = defaultTheme
         this.clock = new THREE.Clock
@@ -128,8 +128,8 @@ export class Swellray {
         this.camera.position.set(400, 200, 0);
         this.pointer = new Vector3()
         this.raycaster = new THREE.Raycaster()
-        this.brushDirection = 1
-        this.brushMode = 1
+        this.sculptForce = 0
+        this.sculptMode = 0
         this.sculptDiameterA = 50
         this.sculptDiameterB = 35
         this.sculptAngle = 45
@@ -409,17 +409,17 @@ export class Swellray {
     resetWaves() {
         this.waves = []
     }
-    toggleSculptMode(value) {
-        this.sculptMode = value
+    toggleSculpt(value) {
+        this.switchSculpt = value
         this.sculptAreaPointer.visible = value
         this.sculptSharpPointer.visible = value
         this.controls.enabled = !value
     }
 
 
-    setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower, brushMode, brushDirection) {
-        this.brushDirection = brushDirection
-        this.brushMode = brushMode
+    setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower, sculptMode, sculptForce) {
+        this.sculptForce = sculptForce
+        this.sculptMode = sculptMode
         this.sculptDiameterA = brushSizeX;
         this.sculptDiameterB = brushSizeY;
         this.sculptAttenuationFactor = brushAttenuation;
@@ -727,7 +727,7 @@ export class Swellray {
                         const initialHeight = this.sculptInitialHeights[index];
                         const currentHeight = vertices[index + 1];
 
-                        if (this.brushMode == 3) {
+                        if (this.sculptMode == 2) {
                             // Código para el pincel de suavizado
                             let sumHeights = 0;  // No incluir la altura del vértice actual en la suma
                             let numNeighbors = 0;  // No contar el vértice actual
@@ -766,7 +766,7 @@ export class Swellray {
 
                         else {
                             const attenuation = this.getElipseAttenuation(distance, di, dj);
-                            const deltaHeight = (this.brushDirection == 1 ? 1 : -1) * this.sculptPower * attenuation;
+                            const deltaHeight = (this.sculptForce == 0 ? 1 : -1) * this.sculptPower * attenuation;
                             const targetHeight = initialHeight + deltaHeight;
 
                             // En lugar de usar lerp, incrementamos la altura actual
@@ -774,9 +774,9 @@ export class Swellray {
                             // la atenuación a un valor máximo para evitar el 'arrastramiento' de los montículos.
 
                             let newHeight = initialHeight
-                            if (this.brushMode == 1) {
+                            if (this.sculptMode == 0) {
                                 newHeight = currentHeight + Math.min(deltaHeight, this.sculptPower * 0.01);
-                            } else if (this.brushMode == 2) {
+                            } else if (this.sculptMode == 1) {
                                 newHeight = initialHeight + deltaHeight;
                             }
 
@@ -961,7 +961,7 @@ export class Swellray {
             const intersect = intersects[0];
             this.updateSculptPointer(intersect);
 
-            if (this.sculptMode) {
+            if (this.switchSculpt) {
 
                 this.updateSculptAreaPointer(intersect)
                 if (!this.isPointerDown) return;
@@ -979,7 +979,7 @@ export class Swellray {
     }
     onPointerUp(e) {
         this.isPointerDown = false
-        if (this.sculptMode) {
+        if (this.switchSculpt) {
             // Limpiar sculptInitialHeights
             // Registra la altura inicial de cada vértice
             const vertices = this.floorGeometry.attributes.position.array;
