@@ -32,6 +32,7 @@ export class Swellray {
     axisMarkerXTag: HTMLElement
     floorDepthTag: HTMLElement
     extensionMeasure: Group
+    vizMode: number
     clock: Clock
     controls: OrbitControls
     dots: Points
@@ -75,7 +76,7 @@ export class Swellray {
     sculptor: Sculptor
 
     mode: Array<string>
-    switchSculpt: string
+    actionMode: number
     isPointerDown: boolean
 
     debugCanvas: HTMLCanvasElement
@@ -98,8 +99,8 @@ export class Swellray {
             directions: []
         }
         this.mode = ['preset', 'sculpt'];
-        this.switchSculpt = false;
-
+        this.actionMode = 0;
+        this.vizMode = 0
         this.theme = defaultTheme
         this.clock = new THREE.Clock
         this.debugCanvas = null
@@ -410,10 +411,10 @@ export class Swellray {
         this.waves = []
     }
     toggleSculpt(value) {
-        this.switchSculpt = value
-        this.sculptAreaPointer.visible = value
-        this.sculptSharpPointer.visible = value
-        this.controls.enabled = !value
+        this.actionMode = value
+        this.sculptAreaPointer.visible = this.actionMode == 1
+        this.sculptSharpPointer.visible = this.actionMode == 1
+        this.controls.enabled = !(this.actionMode == 1)
     }
 
 
@@ -427,6 +428,14 @@ export class Swellray {
         this.sculptPower = brushPower;
         this.createSculptAreaPointer();
 
+    }
+    setVizMode(vizMode){
+        this.vizMode = vizMode
+        if(vizMode == 0){
+            this.seaPlane.visible = false;
+        }else{
+            this.seaPlane.visible = true
+        }
     }
     updateSculptPointer(intersect: any) {
 
@@ -961,7 +970,7 @@ export class Swellray {
             const intersect = intersects[0];
             this.updateSculptPointer(intersect);
 
-            if (this.switchSculpt) {
+            if (this.actionMode == 1) {
 
                 this.updateSculptAreaPointer(intersect)
                 if (!this.isPointerDown) return;
@@ -979,7 +988,7 @@ export class Swellray {
     }
     onPointerUp(e) {
         this.isPointerDown = false
-        if (this.switchSculpt) {
+        if (this.actionMode == 1) {
             // Limpiar sculptInitialHeights
             // Registra la altura inicial de cada vértice
             const vertices = this.floorGeometry.attributes.position.array;
