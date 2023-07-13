@@ -421,8 +421,8 @@ export class Swellray {
     setBrush(brushSizeX, brushSizeY, brushAttenuation, brushRotation, brushPower, sculptMode, sculptForce) {
         this.sculptForce = sculptForce
         this.sculptMode = sculptMode
-        this.sculptDiameterA = brushSizeX;
-        this.sculptDiameterB = brushSizeY;
+        this.sculptDiameterA = brushSizeY;
+        this.sculptDiameterB = brushSizeX;
         this.sculptAttenuationFactor = brushAttenuation;
         this.sculptAngle = brushRotation;
         this.sculptPower = brushPower;
@@ -945,6 +945,7 @@ export class Swellray {
         this.floorPlane.position.setY(this.floorPosition)
         this.scene.add(this.floorPlane)
         this.updateEnergyMap()
+        this.drawMaps()
     }
 
     async loadChop(chopMapImage: string) {
@@ -1105,7 +1106,7 @@ export class Swellray {
 
         this.moveTag(this.letCompass.directions[0], new Vector3(-compassDistance * Math.cos(this.swellDirection), 20, -compassDistance * Math.sin(this.swellDirection)), true, false)
         this.moveTag(this.letCompass.directions[1], new Vector3(-compassDistance * Math.cos(this.secondarySwellDirection), 20, -compassDistance * Math.sin(this.secondarySwellDirection)), true, false)
-        this.moveTag(this.letCompass.directions[2], new Vector3(-compassDistance * Math.cos(this.windDirection), 20, -compassDistance * Math.sin(this.windDirection)), true, false)
+        // this.moveTag(this.letCompass.directions[2], new Vector3(-compassDistance * Math.cos(this.windDirection), 20, -compassDistance * Math.sin(this.windDirection)), true, false)
 
     }
     updatePointer() {
