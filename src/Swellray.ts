@@ -154,11 +154,16 @@ export class Swellray {
         this.setBrush(0, 0, 0, 0, 1);
 
         window.addEventListener('resize', this.onWindowResize.bind(this));
-        window.addEventListener('pointermove', this.onPointerMove.bind(this))
-        window.addEventListener("pointerdown", this.onPointerDown.bind(this));
-        window.addEventListener("pointerup", this.onPointerUp.bind(this));
-        window.addEventListener("mousedown", this.onPointerDown.bind(this));
-        window.addEventListener("mouseup", this.onPointerUp.bind(this));
+     // Para interacciones con el mouse
+this.container.addEventListener('mousedown', this.onPointerDown.bind(this));
+this.container.addEventListener('mousemove', this.onPointerMove.bind(this));
+this.container.addEventListener('mouseup', this.onPointerUp.bind(this));
+
+// Para interacciones táctiles
+this.container.addEventListener('touchstart', this.onPointerDown.bind(this));
+this.container.addEventListener('touchmove', this.onPointerMove.bind(this));
+this.container.addEventListener('touchend', this.onPointerUp.bind(this));
+
         window.addEventListener('keyup', (event) => {
             if (event.key === 'd' || event.key === 'D') {
                this.exportDisplacementMap()
@@ -957,9 +962,20 @@ export class Swellray {
         })
     }
     onPointerMove(e) {
+        e.preventDefault()
+        let x, y;
+
+        // Comprobar si el evento es un evento táctil
+        if (e.touches) {
+            x = e.touches[0].clientX;
+            y = e.touches[0].clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
         const rect = this.container.getBoundingClientRect();
-        this.mouse.x = ((e.clientX - rect.left) / this.container.clientWidth) * 2 - 1;
-        this.mouse.y = -((e.clientY - rect.top) / this.container.clientHeight) * 2 + 1;
+        this.mouse.x = ((x - rect.left) / this.container.clientWidth) * 2 - 1;
+        this.mouse.y = -((y - rect.top) / this.container.clientHeight) * 2 + 1;
 
 
 
